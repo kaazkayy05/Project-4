@@ -4,4 +4,3 @@ Open `project.godot` in Godot 4.7.2 and run the project to start at the main men
 
 The story, mechanic rules, and eight-level plan are in `design/aiden-gameplay.md`.
 
-The Web export preset is saved in `export_presets.cfg`. The exported game is in `build/web/`. Serve that directory with a local web server and open `index.html` through the server. For example, from `build/web/`, run `python -m http.server 8000` and visit `http://localhost:8000`.
