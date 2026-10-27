@@ -4,14 +4,14 @@
 
 Open `scenes/kvon_test.tscn` and press **F6** (run current scene), or choose K'von from the main menu. The course is built when the scene runs, so its platforms appear in the running game rather than the editor preview.
 
-- Move: A/D or left/right arrows. Jump: Space.
-- Dash: Shift. Jump near the first gap, then dash in the air to cross it.
-- Wall Run: hold right and W (or up arrow) against the purple wall, and keep moving right over its top.
-- Scream Jump: E. Use it near the right edge of the middle platform to reach the high ledge. This is a movement boost with a visual pulse; no audio asset is included.
-- Collect the three gold fragments by touching them. They automatically reconstruct the placeholder memory diorama. Walk to the end to choose action (+1 Karma) or inaction (-1 Karma).
-- R restarts the whole test. Esc returns to the menu. Falls return you to the latest platform while keeping fragments. Dash and scream recharge on landing.
+- Move: A/D or left/right arrows. Jump: Space. Scream Jump remains the existing E boost away from objects, with its original speed, pulse, and landing recharge. Microphone input, volume-based height, crouching, noise penalties, and the revised wall-jump push remain deferred.
+- Dash: hold any of eight directions with WASD/arrows and press Shift. Travel 4 meters in 0.25 seconds, with no steering or jumping during the burst. No direction means no dash. Solid objects stop it early. The cooldown starts immediately and lasts 3 seconds; landing does not reset it. The player ring shows recharge. At +50 Karma or higher the cooldown is 2 seconds; at -50 or lower the distance is 6 meters. These values are captured when the dash starts.
+- Wall Run: jump toward the purple wall, then dash up-right (W+D+Shift). Keep holding right over the top. A straight horizontal dash into a wall stops; an airborne diagonal or parallel dash can trigger a run. Runs use 8 meters/second with 30% gravity drift for at most 3 seconds. Holding away, landing, reaching the edge, or timing out ends the run. The same wall stays locked until landing or touching a different wall. After an E boost from a wall, contact with a different wall starts another run without a dash. Scream recharge still requires landing.
+- Square objects glow within 2 meters. E opens choices above the object, then 1 adds 10 Karma or 2 subtracts 10. Each object allows one choice; E does nothing near resolved objects. The game keeps running while choices are open. Moving out of range closes them without changing Karma. The top bar marks -50, 0, and +50; Karma stays within -100 to +100.
+- Collect all three gold fragments to reveal the placeholder diorama. Touch the green exit to finish. Red moving squares are hazards: three separate contacts restart the level. Falling also restarts the level.
+- R restarts the level, restores its entry Karma, and resets fragments, objects, hits, and cooldowns. Esc returns to the menu. Karma carries across scene changes within the game session using SceneTree metadata `kvon_session_karma`; future level scripts can use the same key. This is not a disk save.
 
-The memory text, layout, physics, and Karma values are prototype defaults, not final story or balance decisions. `scripts/kvon_player.gd` contains adjustable movement values at the top. `scripts/kvon_test.gd` contains platform rectangles, fragment positions, memory text, and the local Karma choice. Karma resets when restarting or leaving the test. Other test scenes use their existing shared scripts.
+The PDF revision is adapted to 2D at 100 pixels per meter. Up/down dashes change height directly while gravity is disabled. `scripts/kvon_player.gd` contains movement rules; `scripts/kvon_test.gd` contains the course, contextual E, objects, hazards, Karma, and restart/exit logic. Project settings and the other test scenes are unchanged.
 
 Open `project.godot` in Godot 4.7.2 and run the project to start at the main menu. The Aiden, John, K'von, and Kayla buttons open separate starter scenes in `scenes/`. Each scene has a Back to menu button.
 
