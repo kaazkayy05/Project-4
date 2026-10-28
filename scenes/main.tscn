@@ -1,9 +1,13 @@
-[gd_scene load_steps=32 format=3]
+[gd_scene load_steps=41 format=3]
 
 [ext_resource type="Script" path="res://scripts/john_test.gd" id="1_scene"]
 [ext_resource type="PackedScene" path="res://scenes/player_3d.tscn" id="2_player"]
 [ext_resource type="Script" path="res://scripts/moving_platform.gd" id="3_platform"]
 [ext_resource type="Script" path="res://scripts/checkpoint.gd" id="4_checkpoint"]
+[ext_resource type="Script" path="res://scripts/puzzle_collectibles.gd" id="5_puzzle"]
+[ext_resource type="PackedScene" path="res://assets/puzzle-pieces.fbx" id="6_puzzle_source"]
+[ext_resource type="Script" path="res://scripts/completed_puzzle_picture.gd" id="7_picture_script"]
+[ext_resource type="Texture2D" path="res://assets/baseball.jpeg" id="8_baseball"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_Confetti"]
 albedo_color = Color(1, 0.85, 0.2, 1)
@@ -142,6 +146,29 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
+
+[sub_resource type="SphereShape3D" id="PuzzlePickupShape"]
+radius = 0.75
+
+[sub_resource type="StandardMaterial3D" id="PuzzleCyan"]
+resource_name = "Pickup Cyan"
+shading_mode = 0
+albedo_color = Color(0.08, 0.8, 0.95, 1)
+
+[sub_resource type="StandardMaterial3D" id="PuzzlePink"]
+resource_name = "Pickup Pink"
+shading_mode = 0
+albedo_color = Color(0.9, 0.18, 0.7, 1)
+
+[sub_resource type="StandardMaterial3D" id="PuzzleGold"]
+resource_name = "Pickup Gold"
+shading_mode = 0
+albedo_color = Color(1, 0.75, 0.08, 1)
+
+[sub_resource type="StandardMaterial3D" id="PuzzleGreen"]
+resource_name = "Pickup Green"
+shading_mode = 0
+albedo_color = Color(0.12, 0.85, 0.25, 1)
 
 [node name="JohnTestScene" type="Node3D"]
 script = ExtResource("1_scene")
@@ -336,13 +363,10 @@ offset_right = -20.0
 offset_bottom = 60.0
 grow_horizontal = 2
 
-[node name="MouseHintLabel" type="Label" parent="HUD/TopBar"]
+[node name="Spacer" type="Control" parent="HUD/TopBar"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.8, 0.88, 0.95, 0.9)
-theme_override_font_sizes/font_size = 15
-text = "Mouse: Look around (Press [Tab] or [Esc] to show cursor)"
-vertical_alignment = 1
+mouse_filter = 2
 
 [node name="TimerLabel" type="Label" parent="HUD/TopBar"]
 layout_mode = 2
@@ -359,9 +383,9 @@ text = "Back to menu"
 
 [node name="ControlsCard" type="PanelContainer" parent="HUD"]
 offset_left = 20.0
-offset_top = 70.0
+offset_top = 16.0
 offset_right = 320.0
-offset_bottom = 220.0
+offset_bottom = 166.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_Card")
 
 [node name="Margin" type="MarginContainer" parent="HUD/ControlsCard"]
@@ -379,7 +403,7 @@ theme_override_constants/separation = 4
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.8, 1, 1)
 theme_override_font_sizes/font_size = 15
-text = "JOHN'S TEST CONTROLS"
+text = "CONTROLS"
 
 [node name="MoveLabel" type="Label" parent="HUD/ControlsCard/Margin/VBox"]
 layout_mode = 2
@@ -515,9 +539,97 @@ theme_override_font_sizes/font_size = 18
 text = "Time: 00:00.00 | Falls: 0"
 horizontal_alignment = 1
 
+[node name="PuzzleCompletion" type="VBoxContainer" parent="HUD/VictoryBanner/VBox"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="HUD/VictoryBanner/VBox/PuzzleCompletion"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "Puzzle complete!"
+horizontal_alignment = 1
+
+[node name="Picture" type="Control" parent="HUD/VictoryBanner/VBox/PuzzleCompletion"]
+custom_minimum_size = Vector2(560, 300)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("7_picture_script")
+picture = ExtResource("8_baseball")
+
 [node name="RestartButton" type="Button" parent="HUD/VictoryBanner/VBox"]
 custom_minimum_size = Vector2(200, 46)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 18
 text = "Play Again"
+
+[node name="PuzzleCollectibles" type="Node3D" parent="."]
+script = ExtResource("5_puzzle")
+source_scene = ExtResource("6_puzzle_source")
+
+[node name="Wall1Early" type="Area3D" parent="PuzzleCollectibles"]
+position = Vector3(-3.55, 7, -50)
+collision_layer = 0
+collision_mask = 1
+monitorable = false
+metadata/wall = "WallRun1"
+
+[node name="Visual" type="MeshInstance3D" parent="PuzzleCollectibles/Wall1Early"]
+material_override = SubResource("PuzzleCyan")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PuzzleCollectibles/Wall1Early"]
+shape = SubResource("PuzzlePickupShape")
+
+[node name="Wall1Late" type="Area3D" parent="PuzzleCollectibles"]
+position = Vector3(-3.55, 5, -59)
+collision_layer = 0
+collision_mask = 1
+monitorable = false
+metadata/wall = "WallRun1"
+
+[node name="Visual" type="MeshInstance3D" parent="PuzzleCollectibles/Wall1Late"]
+material_override = SubResource("PuzzlePink")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PuzzleCollectibles/Wall1Late"]
+shape = SubResource("PuzzlePickupShape")
+
+[node name="Wall2Early" type="Area3D" parent="PuzzleCollectibles"]
+position = Vector3(5.55, 7, -78)
+collision_layer = 0
+collision_mask = 1
+monitorable = false
+metadata/wall = "WallRun2"
+
+[node name="Visual" type="MeshInstance3D" parent="PuzzleCollectibles/Wall2Early"]
+material_override = SubResource("PuzzleGold")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PuzzleCollectibles/Wall2Early"]
+shape = SubResource("PuzzlePickupShape")
+
+[node name="Wall2Late" type="Area3D" parent="PuzzleCollectibles"]
+position = Vector3(5.55, 5, -87)
+collision_layer = 0
+collision_mask = 1
+monitorable = false
+metadata/wall = "WallRun2"
+
+[node name="Visual" type="MeshInstance3D" parent="PuzzleCollectibles/Wall2Late"]
+material_override = SubResource("PuzzleGreen")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PuzzleCollectibles/Wall2Late"]
+shape = SubResource("PuzzlePickupShape")
+
+[node name="PuzzleCounter" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 174.0
+offset_right = 320.0
+offset_bottom = 198.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "Puzzle pieces: 0/4"
+vertical_alignment = 1
