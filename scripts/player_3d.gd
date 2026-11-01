@@ -163,17 +163,14 @@ func _update_camera_tilt(delta: float) -> void:
 	camera.rotation.z = lerp_angle(camera.rotation.z, target_roll, 8.0 * delta)
 
 func _update_cooldowns(delta: float) -> void:
-	# Dash cooldown of 3 seconds only refreshes while grounded
-	if is_on_floor() and dash_cooldown > 0.0:
+	# Dash cooldown counts down continuously.
+	if dash_cooldown > 0.0:
 		dash_cooldown = max(0.0, dash_cooldown - delta)
 		var is_ready: bool = dash_cooldown <= 0.0
 		emit_signal("dash_cooldown_changed", dash_cooldown, dash_cooldown_max, is_ready)
 
 func _handle_jump_charge(delta: float) -> void:
 	if not scream_jump_unlocked:
-		if Input.is_action_just_pressed("jump") and (is_on_floor() or coyote_timer > 0.0):
-			velocity.y = min_jump_velocity
-			coyote_timer = 0.0
 		return
 
 	if current_state == State.WALL_RUNNING:

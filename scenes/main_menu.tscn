@@ -25,10 +25,6 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -82.0
-offset_top = -60.0
-offset_right = -82.0
-offset_bottom = -60.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -37,44 +33,8 @@ custom_minimum_size = Vector2(320, 0)
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="Title" type="Label" parent="Center/Menu" unique_id=1734598310]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.97, 1, 1)
-theme_override_font_sizes/font_size = 42
-text = "PROJECT 4"
-horizontal_alignment = 1
-
-[node name="Subtitle" type="Label" parent="Center/Menu" unique_id=1874586088]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.65, 0.73, 0.85, 1)
-theme_override_font_sizes/font_size = 18
-text = "Choose a test scene"
-horizontal_alignment = 1
-
-[node name="Spacer" type="Control" parent="Center/Menu" unique_id=648572162]
-custom_minimum_size = Vector2(0, 16)
-layout_mode = 2
-
-[node name="Aiden" type="Button" parent="Center/Menu" unique_id=151914571]
+[node name="Start" type="Button" parent="Center/Menu" unique_id=2086058578]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
-text = "Aiden"
-
-[node name="John" type="Button" parent="Center/Menu" unique_id=2086058578]
-custom_minimum_size = Vector2(0, 56)
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "John"
-
-[node name="Kvon" type="Button" parent="Center/Menu" unique_id=1925445798]
-custom_minimum_size = Vector2(0, 56)
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "K'von"
-
-[node name="Kayla" type="Button" parent="Center/Menu" unique_id=1906763221]
-custom_minimum_size = Vector2(0, 56)
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "Kayla"
+text = "Start"
