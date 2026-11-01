@@ -3,6 +3,15 @@ extends "res://scripts/level_02.gd"
 const HALLOWEEN_SPAWN := Vector3(-20, 0.1, 0)
 const REQUIRED_COLLECTIBLES := 5
 const FINAL_GAP := 8.0
+const HALLOWEEN_MODELS: PackedScene = preload("res://Models/HALLOWEEN_STREET_10_HOUSES_5_TREES.glb")
+const WALKABLE_RECTS := [
+	Rect2(-24, -4, 8, 8), Rect2(-18, -2, 8, 4),
+	Rect2(-12, -14, 4, 24), Rect2(-22, -16, 32, 4),
+	Rect2(-24, -25, 4, 11), Rect2(-36, -27, 14, 4),
+	Rect2(-38, -31, 4, 6), Rect2(15, -16, 15, 4),
+	Rect2(28, -25, 4, 11), Rect2(30, -27, 14, 4),
+	Rect2(-12, 18, 4, 4),
+]
 
 var collected_items := 0
 var dash_upgraded := false
@@ -53,16 +62,38 @@ func _ready() -> void:
 
 
 func _add_floor(floor_name: String, center: Vector3, size: Vector3) -> void:
-	_solid_box(floor_name, center, size, Color(0.17, 0.13, 0.19))
-	_visual_box(center + Vector3(0, size.y * 0.5 + 0.02, 0),
-		Vector3(size.x, 0.04, size.z), Color(0.28, 0.23, 0.3))
-	# Sparse paving breaks up the otherwise solid memory-platform surface.
-	var count := maxi(1, floori(size.z / 3.5))
-	for index in range(count):
-		var z := center.z - size.z * 0.5 + (index + 0.5) * size.z / count
-		_visual_box(Vector3(center.x, 0.055, z),
-			Vector3(minf(size.x - 0.35, 4.0), 0.02, 0.055),
-			Color(0.36, 0.3, 0.39))
+	_solid_box(floor_name, center, size, Color(0.075, 0.07, 0.095))
+	_visual_box(Vector3(center.x, 0.018, center.z),
+		Vector3(size.x, 0.035, size.z), Color(0.115, 0.105, 0.13))
+	var horizontal := size.x > size.z
+	if floor_name == "EntranceYard":
+		horizontal = true
+	var half_width := (size.z if horizontal else size.x) * 0.5
+	var road_length := size.x if horizontal else size.z
+	# Narrow concrete gutters and pale shoulder lines frame the asphalt.
+	for side in [-1.0, 1.0]:
+		var curb_offset: float = side * (half_width - 0.13)
+		if horizontal:
+			_visual_box(Vector3(center.x, 0.055, center.z + curb_offset),
+				Vector3(road_length, 0.11, 0.25), Color(0.31, 0.28, 0.31))
+			_visual_box(Vector3(center.x, 0.038, center.z + side * (half_width - 0.43)),
+				Vector3(road_length, 0.012, 0.065), Color(0.58, 0.51, 0.43))
+		else:
+			_visual_box(Vector3(center.x + curb_offset, 0.055, center.z),
+				Vector3(0.25, 0.11, road_length), Color(0.31, 0.28, 0.31))
+			_visual_box(Vector3(center.x + side * (half_width - 0.43), 0.038, center.z),
+				Vector3(0.065, 0.012, road_length), Color(0.58, 0.51, 0.43))
+	# Uneven amber center dashes make the existing route read as a street.
+	for index in range(maxi(1, floori(road_length / 2.9))):
+		var along := -road_length * 0.5 + 1.4 + index * 2.9
+		if absf(along) > road_length * 0.5 - 0.65:
+			continue
+		if horizontal:
+			_visual_box(Vector3(center.x + along, 0.043, center.z),
+				Vector3(1.15, 0.012, 0.08), Color(0.78, 0.47, 0.14))
+		else:
+			_visual_box(Vector3(center.x, 0.043, center.z + along),
+				Vector3(0.08, 0.012, 1.15), Color(0.78, 0.47, 0.14))
 
 
 func _add_atmosphere() -> void:
@@ -100,9 +131,7 @@ func _add_halloween_props() -> void:
 	for at in [Vector3(-23.3, 0, 2.8), Vector3(-21.1, 0, -23.9),
 		Vector3(23, 0, -15.3)]:
 		_add_gravestone(at)
-	_add_house(Vector3(-22.3, 0, 3.0), Vector3(2.8, 2.8, 2.0))
-	_add_house(Vector3(-36, 0, -32), Vector3(3.2, 3.0, 2.2))
-	_add_house(Vector3(43.5, 0, -25), Vector3(2.8, 3.3, 2.0))
+	_add_neighborhood_screen()
 	_add_sign(Vector3(-20, 3.0, -3.0), "TRICK OR TREAT")
 	_add_sign(Vector3(-10, 3.0, 19.0), "THE WAY OUT")
 	# The lighted posts mark the launch edge without filling the gap.
@@ -113,38 +142,158 @@ func _add_halloween_props() -> void:
 			Color(0.88, 0.37, 0.1))
 
 
-func _add_house(at: Vector3, size: Vector3) -> void:
-	var wall := Color(0.16, 0.12, 0.2)
-	var roof := Color(0.09, 0.08, 0.14)
-	_solid_box("HouseFoundation", at + Vector3(0, -0.18, 0),
-		Vector3(size.x + 1.2, 0.36, size.z + 1.2), Color(0.24, 0.2, 0.28))
-	_visual_box(at + Vector3(0, size.y * 0.5, 0), size, wall)
-	for side in [-1.0, 1.0]:
-		var slope := BoxMesh.new()
-		slope.size = Vector3(size.x * 0.65, 0.14, size.z + 0.3)
-		var visual := _mesh(slope,
-			at + Vector3(side * size.x * 0.23, size.y + 0.35, 0), roof)
-		visual.rotation.z = side * 0.43
-	var front_z := at.z + size.z * 0.5 + 0.04
-	_visual_box(Vector3(at.x, 0.86, front_z), Vector3(0.78, 1.72, 0.08),
-		Color(0.31, 0.14, 0.1))
-	for side in [-1.0, 1.0]:
-		var window := BoxMesh.new()
-		window.size = Vector3(0.43, 0.5, 0.08)
-		_mesh(window, Vector3(at.x + side * size.x * 0.31, 1.75, front_z),
-			Color(0.98, 0.62, 0.2), true)
-	var lamp := OmniLight3D.new()
-	lamp.position = Vector3(at.x, 2.2, front_z + 0.2)
-	lamp.light_color = Color(1.0, 0.62, 0.27)
-	lamp.light_energy = 0.9
-	lamp.omni_range = 5.0
-	add_child(lamp)
-	var bowl := CylinderMesh.new()
-	bowl.top_radius = 0.34
-	bowl.bottom_radius = 0.22
-	bowl.height = 0.18
-	_mesh(bowl, Vector3(at.x + 0.7, 0.22, front_z + 0.48),
-		Color(0.48, 0.16, 0.09))
+func _add_neighborhood_screen() -> void:
+	# Each frontage faces a platform edge. The short sides stay open at both dash gaps.
+	var frontages := [
+		[Vector2(-24, -4), Vector2(-16, -4), Vector2(0, -1)],
+		[Vector2(-24, 4), Vector2(-16, 4), Vector2(0, 1)],
+		[Vector2(-18, -2), Vector2(-12, -2), Vector2(0, -1)],
+		[Vector2(-18, 2), Vector2(-12, 2), Vector2(0, 1)],
+		[Vector2(-12, -14), Vector2(-12, 10), Vector2(-1, 0)],
+		[Vector2(-8, -12), Vector2(-8, 10), Vector2(1, 0)],
+		[Vector2(-22, -16), Vector2(10, -16), Vector2(0, -1)],
+		[Vector2(-20, -12), Vector2(10, -12), Vector2(0, 1)],
+		[Vector2(-24, -25), Vector2(-24, -16), Vector2(-1, 0)],
+		[Vector2(-20, -25), Vector2(-20, -16), Vector2(1, 0)],
+		[Vector2(-36, -27), Vector2(-24, -27), Vector2(0, -1)],
+		[Vector2(-34, -23), Vector2(-24, -23), Vector2(0, 1)],
+		[Vector2(-38, -31), Vector2(-38, -27), Vector2(-1, 0)],
+		[Vector2(15, -16), Vector2(30, -16), Vector2(0, -1)],
+		[Vector2(15, -12), Vector2(28, -12), Vector2(0, 1)],
+		[Vector2(28, -25), Vector2(28, -16), Vector2(-1, 0)],
+		[Vector2(32, -25), Vector2(32, -16), Vector2(1, 0)],
+		[Vector2(32, -27), Vector2(44, -27), Vector2(0, -1)],
+		[Vector2(32, -23), Vector2(44, -23), Vector2(0, 1)],
+		[Vector2(-12, 18), Vector2(-12, 22), Vector2(-1, 0)],
+		[Vector2(-8, 18), Vector2(-8, 22), Vector2(1, 0)],
+	]
+	var source := HALLOWEEN_MODELS.instantiate()
+	var house_models: Dictionary = {}
+	var tree_models: Dictionary = {}
+	for part in source.get_children():
+		if part.name.contains("HOUSE_"):
+			for number in range(1, 11):
+				if part.name.contains("HOUSE_%02d" % number):
+					source.remove_child(part)
+					house_models[number] = part
+					break
+		elif part.name.contains("SPOOKY_TREE_"):
+			for number in range(1, 6):
+				if part.name.contains("SPOOKY_TREE_%02d" % number):
+					source.remove_child(part)
+					tree_models[number] = part
+					break
+	source.free() # Discard the asset's straight presentation road and cameras.
+	# Road-edge anchors keep every modeled walkway connected to the existing route.
+	var house_plots := [
+		[1, Vector2(-30, -23), Vector2(0, 1)],
+		[2, Vector2(-8, -6), Vector2(1, 0)],
+		[3, Vector2(38, -23), Vector2(0, 1)],
+		[4, Vector2(-8, 5), Vector2(1, 0)],
+		[5, Vector2(-14, -16), Vector2(0, -1)],
+		[6, Vector2(3, -12), Vector2(0, 1)],
+		[7, Vector2(22, -16), Vector2(0, -1)],
+		[8, Vector2(22, -12), Vector2(0, 1)],
+		[9, Vector2(-29, -27), Vector2(0, -1)],
+		[10, Vector2(37, -27), Vector2(0, -1)],
+	]
+	var house_scale := 0.45
+	for plot in house_plots:
+		var number: int = plot[0]
+		var edge: Vector2 = plot[1]
+		var outward: Vector2 = plot[2]
+		var house: Node3D = house_models[number]
+		var root_at := edge + outward * (18.0 * house_scale)
+		house.position = Vector3(root_at.x, 0, root_at.y)
+		house.rotation.y = atan2(-outward.x, -outward.y)
+		house.scale = Vector3.ONE * house_scale
+		add_child(house)
+		_make_model_walkway_walkable(house)
+	var tree_index := 0
+	for frontage in frontages:
+		var start: Vector2 = frontage[0]
+		var finish: Vector2 = frontage[1]
+		var outward: Vector2 = frontage[2]
+		var length := start.distance_to(finish)
+		var tangent := (finish - start) / length
+		var count := maxi(1, ceili(length / 5.0))
+		for slot in range(count):
+			var edge := start + tangent * ((slot + 0.5) * length / count)
+			var tree_at := edge + outward * 3.0
+			var by_house := false
+			for plot in house_plots:
+				var house_edge: Vector2 = plot[1]
+				var house_outward: Vector2 = plot[2]
+				var along_path := clampf((tree_at - house_edge).dot(house_outward), 0.0, 6.5)
+				var nearest_path := house_edge + house_outward * along_path
+				if tree_at.distance_to(nearest_path) < 3.2 or (
+					outward == house_outward and edge.distance_to(house_edge) < 5.5):
+					by_house = true
+					break
+			if by_house:
+				continue
+			if not _scenery_footprint_clear(tree_at, Vector2(2.0, 2.0)):
+				continue
+			var tree_type := tree_index % 5 + 1
+			var tree: Node3D = tree_models[tree_type].duplicate()
+			tree.position = Vector3(tree_at.x, 0, tree_at.y)
+			tree.rotation.y = float(tree_index % 7) * 0.43
+			tree.scale = Vector3.ONE * 0.45
+			add_child(tree)
+			tree_index += 1
+	for template in tree_models.values():
+		template.free()
+
+
+func _make_model_walkway_walkable(house: Node3D) -> void:
+	var path_body := StaticBody3D.new()
+	path_body.name = "DoorPathCollision"
+	house.add_child(path_body)
+	var backing_material := StandardMaterial3D.new()
+	backing_material.albedo_color = Color(0.13, 0.11, 0.12)
+	backing_material.roughness = 1.0
+	var paver_count := 0
+	for piece in house.get_children():
+		if piece.name.begins_with("WALKWAY "):
+			var shape := BoxShape3D.new()
+			shape.size = Vector3(3.6, 0.28, 0.91)
+			var collision := CollisionShape3D.new()
+			collision.name = "PaverCollision%02d" % paver_count
+			collision.shape = shape
+			collision.position = piece.position + Vector3(0, -0.11, 0)
+			path_body.add_child(collision)
+			var backing := MeshInstance3D.new()
+			var backing_box := BoxMesh.new()
+			backing_box.size = Vector3(3.6, 0.24, 0.91)
+			backing.mesh = backing_box
+			backing.position = piece.position + Vector3(0, -0.15, 0)
+			backing.material_override = backing_material
+			path_body.add_child(backing)
+			paver_count += 1
+		elif piece.name.begins_with("Door stone threshold"):
+			var threshold := CollisionShape3D.new()
+			var threshold_shape := BoxShape3D.new()
+			threshold_shape.size = Vector3(3.2, 0.28, 1.1)
+			threshold.shape = threshold_shape
+			threshold.position = piece.position + Vector3(0, -0.11, 0)
+			path_body.add_child(threshold)
+		elif piece.name.begins_with("FRONT DOOR"):
+			var door_stop := CollisionShape3D.new()
+			var stop_shape := BoxShape3D.new()
+			stop_shape.size = Vector3(4.5, 3.1, 0.3)
+			door_stop.shape = stop_shape
+			door_stop.position = piece.position
+			path_body.add_child(door_stop)
+	if paver_count < 12:
+		push_error("A Halloween house has an incomplete modeled door path: " + house.name)
+
+
+func _scenery_footprint_clear(center: Vector2, size: Vector2) -> bool:
+	var footprint := Rect2(center - size * 0.5, size)
+	for walkable in WALKABLE_RECTS:
+		if footprint.intersects(walkable):
+			return false
+	return true
 
 
 func _add_pumpkin(at: Vector3) -> void:
