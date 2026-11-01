@@ -4,6 +4,20 @@ const HALLOWEEN_SPAWN := Vector3(-20, 0.1, 0)
 const REQUIRED_COLLECTIBLES := 5
 const FINAL_GAP := 8.0
 const HALLOWEEN_MODELS: PackedScene = preload("res://Models/HALLOWEEN_STREET_10_HOUSES_5_TREES.glb")
+const SIDEWALK_WIDTH := 1.2
+const GRASS_VERGE_WIDTH := 3.6
+const HOUSE_PLOTS := [
+	[1, Vector2(-30, -23), Vector2(0, 1)],
+	[2, Vector2(-8, -6), Vector2(1, 0)],
+	[3, Vector2(38, -23), Vector2(0, 1)],
+	[4, Vector2(-8, 5), Vector2(1, 0)],
+	[5, Vector2(-14, -16), Vector2(0, -1)],
+	[6, Vector2(3, -12), Vector2(0, 1)],
+	[7, Vector2(22, -16), Vector2(0, -1)],
+	[8, Vector2(22, -12), Vector2(0, 1)],
+	[9, Vector2(-28, -27), Vector2(0, -1)],
+	[10, Vector2(37, -27), Vector2(0, -1)],
+]
 const WALKABLE_RECTS := [
 	Rect2(-24, -4, 8, 8), Rect2(-18, -2, 8, 4),
 	Rect2(-12, -14, 4, 24), Rect2(-22, -16, 32, 4),
@@ -72,15 +86,11 @@ func _add_floor(floor_name: String, center: Vector3, size: Vector3) -> void:
 	var road_length := size.x if horizontal else size.z
 	# Narrow concrete gutters and pale shoulder lines frame the asphalt.
 	for side in [-1.0, 1.0]:
-		var curb_offset: float = side * (half_width - 0.13)
+		_add_road_curb(center, size, horizontal, side)
 		if horizontal:
-			_visual_box(Vector3(center.x, 0.055, center.z + curb_offset),
-				Vector3(road_length, 0.11, 0.25), Color(0.31, 0.28, 0.31))
 			_visual_box(Vector3(center.x, 0.038, center.z + side * (half_width - 0.43)),
 				Vector3(road_length, 0.012, 0.065), Color(0.58, 0.51, 0.43))
 		else:
-			_visual_box(Vector3(center.x + curb_offset, 0.055, center.z),
-				Vector3(0.25, 0.11, road_length), Color(0.31, 0.28, 0.31))
 			_visual_box(Vector3(center.x + side * (half_width - 0.43), 0.038, center.z),
 				Vector3(0.065, 0.012, road_length), Color(0.58, 0.51, 0.43))
 	# Uneven amber center dashes make the existing route read as a street.
@@ -94,6 +104,33 @@ func _add_floor(floor_name: String, center: Vector3, size: Vector3) -> void:
 		else:
 			_visual_box(Vector3(center.x, 0.043, center.z + along),
 				Vector3(0.08, 0.012, 1.15), Color(0.78, 0.47, 0.14))
+
+
+func _add_road_curb(center: Vector3, size: Vector3,
+		horizontal: bool, side: float) -> void:
+	var length := size.x if horizontal else size.z
+	var half_width := (size.z if horizontal else size.x) * 0.5
+	var count := maxi(1, ceili(length / 1.0))
+	var segment_length := length / count
+	var outward := Vector2(0, side) if horizontal else Vector2(side, 0)
+	for index in range(count):
+		var along := -length * 0.5 + (index + 0.5) * segment_length
+		var edge := Vector2(center.x + along, center.z + side * half_width) if horizontal else Vector2(center.x + side * half_width, center.z + along)
+		if not _scenery_footprint_clear(edge + outward * 0.18, Vector2(0.2, 0.2)):
+			continue
+		var at_house_path := false
+		for plot in HOUSE_PLOTS:
+			var house_edge: Vector2 = plot[1]
+			var house_outward: Vector2 = plot[2]
+			if outward == house_outward and edge.distance_to(house_edge) < 1.05:
+				at_house_path = true
+				break
+		if at_house_path:
+			continue
+		var at := Vector3(edge.x - outward.x * 0.13, 0.055,
+			edge.y - outward.y * 0.13)
+		var curb_size := Vector3(segment_length, 0.11, 0.25) if horizontal else Vector3(0.25, 0.11, segment_length)
+		_visual_box(at, curb_size, Color(0.31, 0.28, 0.31))
 
 
 func _add_atmosphere() -> void:
@@ -185,20 +222,9 @@ func _add_neighborhood_screen() -> void:
 					break
 	source.free() # Discard the asset's straight presentation road and cameras.
 	# Road-edge anchors keep every modeled walkway connected to the existing route.
-	var house_plots := [
-		[1, Vector2(-30, -23), Vector2(0, 1)],
-		[2, Vector2(-8, -6), Vector2(1, 0)],
-		[3, Vector2(38, -23), Vector2(0, 1)],
-		[4, Vector2(-8, 5), Vector2(1, 0)],
-		[5, Vector2(-14, -16), Vector2(0, -1)],
-		[6, Vector2(3, -12), Vector2(0, 1)],
-		[7, Vector2(22, -16), Vector2(0, -1)],
-		[8, Vector2(22, -12), Vector2(0, 1)],
-		[9, Vector2(-29, -27), Vector2(0, -1)],
-		[10, Vector2(37, -27), Vector2(0, -1)],
-	]
+	_add_neighborhood_ground(frontages)
 	var house_scale := 0.45
-	for plot in house_plots:
+	for plot in HOUSE_PLOTS:
 		var number: int = plot[0]
 		var edge: Vector2 = plot[1]
 		var outward: Vector2 = plot[2]
@@ -221,7 +247,7 @@ func _add_neighborhood_screen() -> void:
 			var edge := start + tangent * ((slot + 0.5) * length / count)
 			var tree_at := edge + outward * 3.0
 			var by_house := false
-			for plot in house_plots:
+			for plot in HOUSE_PLOTS:
 				var house_edge: Vector2 = plot[1]
 				var house_outward: Vector2 = plot[2]
 				var along_path := clampf((tree_at - house_edge).dot(house_outward), 0.0, 6.5)
@@ -243,6 +269,45 @@ func _add_neighborhood_screen() -> void:
 			tree_index += 1
 	for template in tree_models.values():
 		template.free()
+
+
+func _add_neighborhood_ground(frontages: Array) -> void:
+	for frontage in frontages:
+		var start: Vector2 = frontage[0]
+		var finish: Vector2 = frontage[1]
+		var outward: Vector2 = frontage[2]
+		var length := start.distance_to(finish)
+		var tangent := (finish - start) / length
+		var count := maxi(1, ceili(length / 1.8))
+		var segment_length := length / count
+		for index in range(count):
+			var edge := start + tangent * ((index + 0.5) * segment_length)
+			var sidewalk_at := edge + outward * (SIDEWALK_WIDTH * 0.5)
+			var sidewalk_size := Vector2(segment_length, SIDEWALK_WIDTH) if outward.y != 0 else Vector2(SIDEWALK_WIDTH, segment_length)
+			if _scenery_footprint_clear(sidewalk_at, sidewalk_size):
+				_add_walkable_ground("NeighborhoodSidewalk", sidewalk_at,
+					sidewalk_size, Color(0.29, 0.28, 0.28), 0.012)
+			var grass_at := edge + outward * (SIDEWALK_WIDTH + GRASS_VERGE_WIDTH * 0.5)
+			var grass_size := Vector2(segment_length, GRASS_VERGE_WIDTH) if outward.y != 0 else Vector2(GRASS_VERGE_WIDTH, segment_length)
+			if _scenery_footprint_clear(grass_at, grass_size):
+				_add_walkable_ground("NeighborhoodGrass", grass_at,
+					grass_size, Color(0.15, 0.22, 0.145), -0.012)
+
+
+func _add_walkable_ground(ground_name: String, at: Vector2,
+		size: Vector2, color: Color, visual_offset: float) -> void:
+	var body := StaticBody3D.new()
+	body.name = ground_name
+	body.position = Vector3(at.x, -0.18, at.y)
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(size.x, 0.36, size.y)
+	collision.shape = shape
+	body.add_child(collision)
+	add_child(body)
+	var surface := BoxMesh.new()
+	surface.size = shape.size
+	_mesh(surface, body.position + Vector3(0, visual_offset, 0), color)
 
 
 func _make_model_walkway_walkable(house: Node3D) -> void:
@@ -284,6 +349,16 @@ func _make_model_walkway_walkable(house: Node3D) -> void:
 			door_stop.shape = stop_shape
 			door_stop.position = piece.position
 			path_body.add_child(door_stop)
+		elif piece.name.begins_with("Individual lawn"):
+			# The imported lawn is visual-only. Lift its top to the road height.
+			piece.position.y = -0.25
+			var lawn := CollisionShape3D.new()
+			lawn.name = "LawnCollision"
+			var lawn_shape := BoxShape3D.new()
+			lawn_shape.size = Vector3(25, 0.5, 31)
+			lawn.shape = lawn_shape
+			lawn.position = piece.position
+			path_body.add_child(lawn)
 	if paver_count < 12:
 		push_error("A Halloween house has an incomplete modeled door path: " + house.name)
 
