@@ -509,9 +509,7 @@ func _on_finish(body: Node3D) -> void:
 		return
 	completed = true
 	player.set_physics_process(false)
-	completion_label.text = "LEVEL 3 COMPLETE | CANDY KARMA %d" % karma_collected
-	completion_label.show()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	get_tree().call_deferred("change_scene_to_file", "res://scenes/level_04.tscn")
 
 
 func _process(_delta: float) -> void:
