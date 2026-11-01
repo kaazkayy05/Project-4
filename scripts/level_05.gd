@@ -4,6 +4,7 @@ const FUNERAL_GREYBOX: PackedScene = preload(
 	"res://Purgatory_Act1_Blender_10_Levels/purgatory_act1_greybox/levels/level_05_grim_funeral.glb"
 )
 const FUNERAL_SPAWN := Vector3(0, 0.1, -5)
+const MAZE_WALL_EXTENSION := 3.0
 
 
 func _ready() -> void:
@@ -53,11 +54,25 @@ func _add_greybox() -> void:
 		var bounds := visual.mesh.get_aabb()
 		var shape := BoxShape3D.new()
 		shape.size = bounds.size
+		var collision_center := bounds.get_center()
+		if part_name.begins_with("MAZE_"):
+			shape.size.z += MAZE_WALL_EXTENSION
+			collision_center.z += MAZE_WALL_EXTENSION * 0.5
+			var cap := MeshInstance3D.new()
+			cap.name = "Raised_" + part_name
+			var cap_mesh := BoxMesh.new()
+			cap_mesh.size = Vector3(bounds.size.x, bounds.size.y, MAZE_WALL_EXTENSION)
+			cap.mesh = cap_mesh
+			cap.material_override = visual.get_active_material(0)
+			cap.transform = visual.transform * Transform3D(Basis(),
+				bounds.get_center() + Vector3(0, 0,
+					(bounds.size.z + MAZE_WALL_EXTENSION) * 0.5))
+			world.add_child(cap)
 		var collision := CollisionShape3D.new()
 		collision.name = "Collision_" + part_name
 		collision.shape = shape
 		collision.transform = visual.transform * Transform3D(
-			Basis(), bounds.get_center()
+			Basis(), collision_center
 		)
 		geometry.add_child(collision)
 
