@@ -156,7 +156,7 @@ func _on_dash_cooldown_changed(current: float, maximum: float, is_ready: bool) -
 			dash_label.text = "DASH: READY [SHIFT]"
 			dash_label.modulate = Color(0.3, 1.0, 0.4)
 		else:
-			dash_label.text = "DASH REFRESH (touch floor): %.1fs" % current
+			dash_label.text = "DASH REFRESH: %.1fs" % current
 			dash_label.modulate = Color(1.0, 0.7, 0.2)
 
 func _on_jump_charge_changed(charge_percent: float, is_charging: bool) -> void:
