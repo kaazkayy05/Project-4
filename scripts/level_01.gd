@@ -97,8 +97,12 @@ func _add_snow_surface(body: StaticBody3D, size: Vector3) -> void:
 			var point := _snow_vertex(body, size, noise, x_index, z_index, x_steps, z_steps)
 			vertices.append(point)
 			var snow_depth := point.y - size.y * 0.5
-			colors.append(Color(0.94, 0.97, 1.0).lerp(
-				Color(0.71, 0.8, 0.91), clampf(snow_depth * 0.38, 0.0, 0.3)))
+			var edge_distance := minf(size.x * 0.5 - absf(point.x),
+				size.z * 0.5 - absf(point.z))
+			var snow_color := Color(0.64, 0.77, 0.91).lerp(
+				Color(0.99, 1.0, 1.0), clampf((snow_depth - 0.04) / 0.65, 0.0, 1.0))
+			colors.append(Color(0.82, 0.9, 0.96).lerp(snow_color,
+				smoothstep(0.0, 0.8, edge_distance)))
 	for x_index in range(x_steps + 1):
 		for z_index in range(z_steps + 1):
 			var left := vertices[maxi(0, x_index - 1) * stride + z_index]
@@ -112,7 +116,7 @@ func _add_snow_surface(body: StaticBody3D, size: Vector3) -> void:
 			var b := (x_index + 1) * stride + z_index
 			var c := a + 1
 			var d := b + 1
-			indices.append_array(PackedInt32Array([a, c, b, b, c, d]))
+			indices.append_array(PackedInt32Array([a, b, c, b, d, c]))
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
@@ -137,11 +141,15 @@ func _snow_vertex(body: StaticBody3D, size: Vector3, noise: FastNoiseLite,
 	var z := (float(z_index) / z_steps - 0.5) * size.z
 	var world_x := body.position.x + x
 	var world_z := body.position.z + z
-	var main_drift := 0.5 + 0.5 * sin(world_x * 0.33 + 0.65 * sin(world_z * 0.22))
-	var crossing_drift := 0.5 + 0.5 * sin(world_z * 0.55 - world_x * 0.21)
+	var main_drift := 0.5 + 0.5 * sin(world_z * 0.9 + 0.5 * sin(world_x * 0.35))
+	var crossing_drift := 0.5 + 0.5 * sin(world_x * 0.7 - world_z * 0.18)
+	var shoulder := smoothstep(0.12, 0.9, absf(x) / (size.x * 0.5))
 	var fine := noise.get_noise_2d(world_x * 1.8, world_z * 1.8)
-	var height := (size.y * 0.5 + 0.035 + 0.28 * main_drift
-		+ 0.12 * crossing_drift + 0.025 * fine)
+	var drift_height := (0.04 + 0.1 * main_drift
+		+ shoulder * (0.42 * main_drift + 0.12 * crossing_drift)
+		+ 0.025 * fine)
+	var edge_distance := minf(size.x * 0.5 - absf(x), size.z * 0.5 - absf(z))
+	var height := size.y * 0.5 - 0.012 + drift_height * smoothstep(0.0, 0.8, edge_distance)
 	return Vector3(x, height, z)
 
 
@@ -371,6 +379,14 @@ func _add_winter_atmosphere() -> void:
 	environment.fog_density = 0.013
 	world.environment = environment
 	add_child(world)
+	for at in [Vector3(-24, 1.8, -1.5), Vector3(4, 1.8, -8),
+		Vector3(13, 1.8, -15), Vector3(18, 1.8, 5)]:
+		var snow_light := OmniLight3D.new()
+		snow_light.position = at
+		snow_light.light_color = Color(0.76, 0.87, 1.0)
+		snow_light.light_energy = 0.85
+		snow_light.omni_range = 8.0
+		add_child(snow_light)
 
 	var flake := SphereMesh.new()
 	flake.radius = 0.035
