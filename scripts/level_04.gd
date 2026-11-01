@@ -63,7 +63,7 @@ func _add_greybox() -> void:
 			continue
 		var visual := part as MeshInstance3D
 		var part_name := String(visual.name)
-		if part_name.begins_with("KARMA_PICKUP") or part_name.begins_with("STORY_ITEM_PICKUP") or part_name.begins_with("PLAYER_SPAWN") or part_name.begins_with("LEVEL_COMPLETION_TRIGGER") or part_name.begins_with("EXIT_ARCH"):
+		if part_name.begins_with("KARMA_PICKUP") or part_name.begins_with("STORY_ITEM_PICKUP") or part_name.begins_with("PLAYER_SPAWN") or part_name.begins_with("LEVEL_COMPLETION_TRIGGER") or part_name.begins_with("EXIT_ARCH") or part_name.begins_with("SCREAM_JUMP_CUE"):
 			visual.hide()
 			continue
 		if part_name.begins_with("GOALPOST_"):
@@ -78,6 +78,11 @@ func _add_greybox() -> void:
 			locker_finish.albedo_color = Color(0.26, 0.17, 0.22)
 			locker_finish.roughness = 0.7
 			visual.material_override = locker_finish
+		elif part_name.begins_with("BLEACHERS_STEP_"):
+			var bleacher_finish := StandardMaterial3D.new()
+			bleacher_finish.albedo_color = Color(0.55, 0.14, 0.19) if visual.mesh.get_aabb().get_center().x < 0.0 else Color(0.14, 0.29, 0.57)
+			bleacher_finish.roughness = 0.8
+			visual.material_override = bleacher_finish
 		if part_name in WALKABLE_PARTS or part_name in BLOCKING_PARTS:
 			var bounds := visual.mesh.get_aabb()
 			var shape := BoxShape3D.new()
@@ -180,17 +185,8 @@ func _add_stadium_details() -> void:
 			for seat in range(5):
 				var x: float = side * (28.0 + seat * 2.5)
 				_visual_box(Vector3(x, 0.34 if z > -67.0 else 3.34, z),
-					Vector3(1.45, 0.28, 1.3), Color(0.33, 0.16, 0.22))
-	for side in [-1.0, 1.0]:
-		for z in [-53.0, -67.0, -82.0, -96.0]:
-			var banner := Label3D.new()
-			banner.text = "HOME" if side < 0.0 else "AWAY"
-			banner.position = Vector3(side * 45.0, 5.0, z)
-			banner.rotation.y = PI * 0.5 if side < 0.0 else -PI * 0.5
-			banner.font_size = 64
-			banner.pixel_size = 0.008
-			banner.modulate = Color(0.78, 0.76, 0.79)
-			add_child(banner)
+					Vector3(1.45, 0.28, 1.3),
+					Color(0.68, 0.2, 0.26) if side < 0.0 else Color(0.2, 0.39, 0.72))
 	_visual_box(Vector3(0, 0.018, -105), Vector3(48, 0.035, 8),
 		Color(0.17, 0.31, 0.22))
 
@@ -338,6 +334,7 @@ func _on_finish(body: Node3D) -> void:
 	completion_label.text = "LEVEL 4 COMPLETE | FOOTBALL KARMA %d / 3" % karma_collected
 	completion_label.show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	get_tree().call_deferred("change_scene_to_file", "res://scenes/level_05.tscn")
 
 
 func _process(_delta: float) -> void:
