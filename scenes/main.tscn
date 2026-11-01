@@ -34,8 +34,8 @@ emission = Color(0.1, 0.4, 0.8, 1)
 emission_energy_multiplier = 1.0
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
-sky_top_color = Color(0.2, 0.45, 0.75, 1)
-sky_horizon_color = Color(0.65, 0.75, 0.85, 1)
+sky_top_color = Color(0.12, 0.24, 0.38, 1)
+sky_horizon_color = Color(0.78, 0.88, 0.92, 1)
 ground_bottom_color = Color(0.1, 0.12, 0.16, 1)
 ground_horizon_color = Color(0.65, 0.75, 0.85, 1)
 
@@ -51,7 +51,7 @@ ambient_light_energy = 0.7
 tonemap_mode = 2
 
 [sub_resource type="StandardMaterial3D" id="Mat_Platform"]
-albedo_color = Color(0.14, 0.18, 0.24, 1)
+albedo_color = Color(0.78, 0.87, 0.9, 1)
 roughness = 0.4
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_Start"]
@@ -73,9 +73,9 @@ size = Vector3(8, 1, 8)
 size = Vector3(8, 1, 8)
 
 [sub_resource type="StandardMaterial3D" id="Mat_MovingPlat"]
-albedo_color = Color(0.15, 0.45, 0.7, 1)
+albedo_color = Color(0.72, 0.08, 0.12, 1)
 emission_enabled = true
-emission = Color(0.1, 0.4, 0.65, 1)
+emission = Color(0.45, 0.02, 0.04, 1)
 emission_energy_multiplier = 0.6
 roughness = 0.3
 
@@ -92,17 +92,17 @@ size = Vector3(8, 1, 8)
 size = Vector3(8, 1, 8)
 
 [sub_resource type="StandardMaterial3D" id="Mat_WallRun"]
-albedo_color = Color(0.9, 0.45, 0.08, 1)
+albedo_color = Color(0.06, 0.34, 0.18, 1)
 emission_enabled = true
-emission = Color(0.9, 0.35, 0.05, 1)
+emission = Color(0.02, 0.22, 0.08, 1)
 emission_energy_multiplier = 0.5
 roughness = 0.2
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_Wall1"]
-size = Vector3(0.8, 10, 22)
+size = Vector3(8, 1, 22)
 
 [sub_resource type="BoxMesh" id="BoxMesh_Wall1"]
-size = Vector3(0.8, 10, 22)
+size = Vector3(8, 1, 22)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_S3"]
 size = Vector3(8, 1, 8)
@@ -111,10 +111,10 @@ size = Vector3(8, 1, 8)
 size = Vector3(8, 1, 8)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_Wall2"]
-size = Vector3(0.8, 10, 24)
+size = Vector3(8, 1, 24)
 
 [sub_resource type="BoxMesh" id="BoxMesh_Wall2"]
-size = Vector3(0.8, 10, 24)
+size = Vector3(8, 1, 24)
 
 [sub_resource type="StandardMaterial3D" id="Mat_Goal"]
 albedo_color = Color(0.95, 0.8, 0.2, 1)
@@ -170,6 +170,22 @@ resource_name = "Pickup Green"
 shading_mode = 0
 albedo_color = Color(0.12, 0.85, 0.25, 1)
 
+[sub_resource type="StandardMaterial3D" id="Mat_TreeTrunk"]
+albedo_color = Color(0.28, 0.13, 0.07, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_TreeFoliage"]
+albedo_color = Color(0.03, 0.3, 0.13, 1)
+
+[sub_resource type="CylinderMesh" id="TreeTrunkMesh"]
+top_radius = 0.2
+bottom_radius = 0.25
+height = 1.6
+
+[sub_resource type="CylinderMesh" id="TreeFoliageMesh"]
+top_radius = 0.0
+bottom_radius = 1.15
+height = 3.4
+
 [node name="JohnTestScene" type="Node3D"]
 script = ExtResource("1_scene")
 
@@ -186,6 +202,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 
 [node name="Player3D" parent="." instance=ExtResource("2_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+scream_jump_unlocked = false
+wall_run_unlocked = false
 
 [node name="KillZone" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -20, -50)
@@ -194,6 +212,32 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -20, -50)
 shape = SubResource("BoxShape3D_KillZone")
 
 [node name="CourseGeometry" type="Node3D" parent="."]
+
+[node name="StartTree" type="Node3D" parent="CourseGeometry"]
+position = Vector3(4.5, 0, 4.5)
+
+[node name="Trunk" type="MeshInstance3D" parent="CourseGeometry/StartTree"]
+position = Vector3(0, 0.8, 0)
+mesh = SubResource("TreeTrunkMesh")
+surface_material_override/0 = SubResource("Mat_TreeTrunk")
+
+[node name="Foliage" type="MeshInstance3D" parent="CourseGeometry/StartTree"]
+position = Vector3(0, 2.8, 0)
+mesh = SubResource("TreeFoliageMesh")
+surface_material_override/0 = SubResource("Mat_TreeFoliage")
+
+[node name="GoalTree" type="Node3D" parent="CourseGeometry"]
+position = Vector3(5.2, 0, -105)
+
+[node name="Trunk" type="MeshInstance3D" parent="CourseGeometry/GoalTree"]
+position = Vector3(0, 0.8, 0)
+mesh = SubResource("TreeTrunkMesh")
+surface_material_override/0 = SubResource("Mat_TreeTrunk")
+
+[node name="Foliage" type="MeshInstance3D" parent="CourseGeometry/GoalTree"]
+position = Vector3(0, 2.8, 0)
+mesh = SubResource("TreeFoliageMesh")
+surface_material_override/0 = SubResource("Mat_TreeFoliage")
 
 [node name="StartPlatform" type="StaticBody3D" parent="CourseGeometry"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
@@ -228,7 +272,7 @@ mesh = SubResource("TorusMesh_Checkpoint")
 material_override = SubResource("Mat_Checkpoint")
 
 [node name="Platform1B" type="StaticBody3D" parent="CourseGeometry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, -25)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -25)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CourseGeometry/Platform1B"]
 shape = SubResource("BoxShape3D_S1B")
@@ -238,9 +282,9 @@ mesh = SubResource("BoxMesh_S1B")
 surface_material_override/0 = SubResource("Mat_Platform")
 
 [node name="MovingPlatform" type="AnimatableBody3D" parent="CourseGeometry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 3.5, -33.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, -33.5)
 script = ExtResource("3_platform")
-move_offset = Vector3(6, 0, 0)
+move_offset = Vector3(0, 0, 0)
 cycle_duration = 3.5
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CourseGeometry/MovingPlatform"]
@@ -251,7 +295,7 @@ mesh = SubResource("BoxMesh_MovingPlat")
 surface_material_override/0 = SubResource("Mat_MovingPlat")
 
 [node name="Platform2" type="StaticBody3D" parent="CourseGeometry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, -42)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -42)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CourseGeometry/Platform2"]
 shape = SubResource("BoxShape3D_S2")
@@ -261,7 +305,7 @@ mesh = SubResource("BoxMesh_S2")
 surface_material_override/0 = SubResource("Mat_Platform")
 
 [node name="Checkpoint2" type="Area3D" parent="CourseGeometry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.2, -42)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, -42)
 script = ExtResource("4_checkpoint")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CourseGeometry/Checkpoint2"]
@@ -273,7 +317,7 @@ mesh = SubResource("TorusMesh_Checkpoint")
 material_override = SubResource("Mat_Checkpoint")
 
 [node name="WallRun1" type="StaticBody3D" parent="CourseGeometry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 7.0, -56)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -56)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CourseGeometry/WallRun1"]
 shape = SubResource("BoxShape3D_Wall1")
@@ -283,7 +327,7 @@ mesh = SubResource("BoxMesh_Wall1")
 surface_material_override/0 = SubResource("Mat_WallRun")
 
 [node name="Platform3" type="StaticBody3D" parent="CourseGeometry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0, 3.5, -70)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -70)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CourseGeometry/Platform3"]
 shape = SubResource("BoxShape3D_S3")
@@ -293,7 +337,7 @@ mesh = SubResource("BoxMesh_S3")
 surface_material_override/0 = SubResource("Mat_Platform")
 
 [node name="Checkpoint3" type="Area3D" parent="CourseGeometry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 4.2, -70)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, -70)
 script = ExtResource("4_checkpoint")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CourseGeometry/Checkpoint3"]
@@ -305,7 +349,7 @@ mesh = SubResource("TorusMesh_Checkpoint")
 material_override = SubResource("Mat_Checkpoint")
 
 [node name="WallRun2" type="StaticBody3D" parent="CourseGeometry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.5, 7.0, -85)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -85)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CourseGeometry/WallRun2"]
 shape = SubResource("BoxShape3D_Wall2")
@@ -315,7 +359,7 @@ mesh = SubResource("BoxMesh_Wall2")
 surface_material_override/0 = SubResource("Mat_WallRun")
 
 [node name="GoalPlatform" type="StaticBody3D" parent="CourseGeometry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, -102)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, -102)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CourseGeometry/GoalPlatform"]
 shape = SubResource("BoxShape3D_GoalPlatform")
@@ -347,7 +391,7 @@ scale_amount_min = 0.8
 scale_amount_max = 1.6
 
 [node name="GoalArea" type="Area3D" parent="CourseGeometry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.5, -102)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -102)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CourseGeometry/GoalArea"]
 shape = SubResource("CylinderShape3D_Goal")
@@ -374,12 +418,6 @@ theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
 theme_override_font_sizes/font_size = 16
 text = "TIME: 00:00.00 | FALLS: 0"
 vertical_alignment = 1
-
-[node name="BackButton" type="Button" parent="HUD/TopBar"]
-custom_minimum_size = Vector2(160, 40)
-layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "Back to menu"
 
 [node name="ControlsCard" type="PanelContainer" parent="HUD"]
 offset_left = 20.0
@@ -417,17 +455,11 @@ theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
 theme_override_font_sizes/font_size = 13
 text = "[SHIFT] - Zero-G Dash (3s floor CD)"
 
-[node name="WallRunLabel" type="Label" parent="HUD/ControlsCard/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
-theme_override_font_sizes/font_size = 13
-text = "Dash into Wall - Wall Run (30% grav)"
-
 [node name="JumpLabel" type="Label" parent="HUD/ControlsCard/Margin/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
 theme_override_font_sizes/font_size = 13
-text = "[SPACE] - Hold to Charge Jump"
+text = "[SPACE] - Jump"
 
 [node name="BottomPanel" type="PanelContainer" parent="HUD"]
 anchors_preset = 12
@@ -483,6 +515,7 @@ value = 3.0
 show_percentage = false
 
 [node name="JumpBox" type="VBoxContainer" parent="HUD/BottomPanel/Margin/HBox"]
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 alignment = 1
@@ -572,7 +605,7 @@ script = ExtResource("5_puzzle")
 source_scene = ExtResource("6_puzzle_source")
 
 [node name="Wall1Early" type="Area3D" parent="PuzzleCollectibles"]
-position = Vector3(-3.55, 7, -50)
+position = Vector3(0, 1, -50)
 collision_layer = 0
 collision_mask = 1
 monitorable = false
@@ -585,7 +618,7 @@ material_override = SubResource("PuzzleCyan")
 shape = SubResource("PuzzlePickupShape")
 
 [node name="Wall1Late" type="Area3D" parent="PuzzleCollectibles"]
-position = Vector3(-3.55, 5, -59)
+position = Vector3(0, 1, -59)
 collision_layer = 0
 collision_mask = 1
 monitorable = false
@@ -598,7 +631,7 @@ material_override = SubResource("PuzzlePink")
 shape = SubResource("PuzzlePickupShape")
 
 [node name="Wall2Early" type="Area3D" parent="PuzzleCollectibles"]
-position = Vector3(5.55, 7, -78)
+position = Vector3(0, 1, -78)
 collision_layer = 0
 collision_mask = 1
 monitorable = false
@@ -611,7 +644,7 @@ material_override = SubResource("PuzzleGold")
 shape = SubResource("PuzzlePickupShape")
 
 [node name="Wall2Late" type="Area3D" parent="PuzzleCollectibles"]
-position = Vector3(5.55, 5, -87)
+position = Vector3(0, 1, -87)
 collision_layer = 0
 collision_mask = 1
 monitorable = false

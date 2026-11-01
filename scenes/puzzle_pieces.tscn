@@ -1,0 +1,147 @@
+[gd_scene load_steps=22 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/puzzle-pieces.fbx" id="1_source"]
+
+[sub_resource type="StandardMaterial3D" id="Mat01"]
+resource_name = "Coral"
+albedo_color = Color(0.95, 0.22, 0.18, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat02"]
+resource_name = "Orange"
+albedo_color = Color(1, 0.48, 0.08, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat03"]
+resource_name = "Gold"
+albedo_color = Color(1, 0.75, 0.08, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat04"]
+resource_name = "Lime"
+albedo_color = Color(0.65, 0.88, 0.12, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat05"]
+resource_name = "Green"
+albedo_color = Color(0.12, 0.65, 0.25, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat06"]
+resource_name = "Mint"
+albedo_color = Color(0.25, 0.9, 0.65, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat07"]
+resource_name = "Teal"
+albedo_color = Color(0.05, 0.55, 0.55, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat08"]
+resource_name = "Cyan"
+albedo_color = Color(0.08, 0.8, 0.95, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat09"]
+resource_name = "Sky"
+albedo_color = Color(0.3, 0.6, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat10"]
+resource_name = "Blue"
+albedo_color = Color(0.18, 0.3, 0.9, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat11"]
+resource_name = "Indigo"
+albedo_color = Color(0.4, 0.25, 0.8, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat12"]
+resource_name = "Violet"
+albedo_color = Color(0.65, 0.3, 0.9, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat13"]
+resource_name = "Magenta"
+albedo_color = Color(0.9, 0.18, 0.7, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat14"]
+resource_name = "Pink"
+albedo_color = Color(1, 0.5, 0.7, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat15"]
+resource_name = "Rose"
+albedo_color = Color(0.7, 0.12, 0.3, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat16"]
+resource_name = "Peach"
+albedo_color = Color(1, 0.7, 0.45, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat17"]
+resource_name = "Ivory"
+albedo_color = Color(0.95, 0.9, 0.65, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat18"]
+resource_name = "Lavender"
+albedo_color = Color(0.7, 0.65, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat19"]
+resource_name = "Turquoise"
+albedo_color = Color(0.4, 0.85, 0.8, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat20"]
+resource_name = "Copper"
+albedo_color = Color(0.65, 0.35, 0.15, 1)
+
+[node name="PuzzlePieces" instance=ExtResource("1_source")]
+position = Vector3(-0.251, 0.065, -0.646)
+scale = Vector3(0.3, 0.3, 0.3)
+
+[node name="Plane" parent="."]
+material_override = SubResource("Mat01")
+
+[node name="Plane_001" parent="."]
+material_override = SubResource("Mat02")
+
+[node name="Plane_002" parent="."]
+material_override = SubResource("Mat03")
+
+[node name="Plane_003" parent="."]
+material_override = SubResource("Mat04")
+
+[node name="Plane_004" parent="."]
+material_override = SubResource("Mat05")
+
+[node name="Plane_005" parent="."]
+material_override = SubResource("Mat06")
+
+[node name="Plane_006" parent="."]
+material_override = SubResource("Mat07")
+
+[node name="Plane_007" parent="."]
+material_override = SubResource("Mat08")
+
+[node name="Plane_008" parent="."]
+material_override = SubResource("Mat09")
+
+[node name="Plane_009" parent="."]
+material_override = SubResource("Mat10")
+
+[node name="Plane_010" parent="."]
+material_override = SubResource("Mat11")
+
+[node name="Plane_011" parent="."]
+material_override = SubResource("Mat12")
+
+[node name="Plane_012" parent="."]
+material_override = SubResource("Mat13")
+
+[node name="Plane_013" parent="."]
+material_override = SubResource("Mat14")
+
+[node name="Plane_014" parent="."]
+material_override = SubResource("Mat15")
+
+[node name="Plane_016" parent="."]
+material_override = SubResource("Mat16")
+
+[node name="Plane_017" parent="."]
+material_override = SubResource("Mat17")
+
+[node name="Plane_018" parent="."]
+material_override = SubResource("Mat18")
+
+[node name="Plane_019" parent="."]
+material_override = SubResource("Mat19")
+
+[node name="Plane_020" parent="."]
+material_override = SubResource("Mat20")

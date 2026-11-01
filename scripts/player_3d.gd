@@ -37,6 +37,8 @@ enum State {
 @export var jump_charge_rate: float = 1.8 # Reaches full charge in ~0.55s
 @export var coyote_time_duration: float = 0.15
 @export var jump_buffer_duration: float = 0.15
+@export var scream_jump_unlocked: bool = true
+@export var wall_run_unlocked: bool = true
 
 # --- Camera Sensitivity ---
 @export var mouse_sensitivity: float = 0.0028
@@ -168,6 +170,12 @@ func _update_cooldowns(delta: float) -> void:
 		emit_signal("dash_cooldown_changed", dash_cooldown, dash_cooldown_max, is_ready)
 
 func _handle_jump_charge(delta: float) -> void:
+	if not scream_jump_unlocked:
+		if Input.is_action_just_pressed("jump") and (is_on_floor() or coyote_timer > 0.0):
+			velocity.y = min_jump_velocity
+			coyote_timer = 0.0
+		return
+
 	if current_state == State.WALL_RUNNING:
 		# In wall-run state, pressing jump immediately ejects from the wall
 		if Input.is_action_just_pressed("jump"):
@@ -288,7 +296,7 @@ func _physics_dashing(delta: float) -> void:
 
 	# Check if dashing into a wall to trigger Wall Run!
 	var wall_hit := _check_wall_collision()
-	if wall_hit.hit:
+	if wall_hit.hit and wall_run_unlocked:
 		_start_wall_run(wall_hit.normal)
 		return
 

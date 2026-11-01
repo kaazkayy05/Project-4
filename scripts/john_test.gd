@@ -10,7 +10,7 @@ const Player3D = preload("res://scripts/player_3d.gd")
 
 # UI References
 @onready var hud: CanvasLayer = $HUD
-@onready var back_button: Button = $HUD/TopBar/BackButton
+@onready var back_button: Button = get_node_or_null("HUD/TopBar/BackButton")
 @onready var mouse_hint_label: Label = get_node_or_null("HUD/TopBar/MouseHintLabel")
 @onready var timer_label: Label = get_node_or_null("HUD/TopBar/TimerLabel")
 @onready var state_label: Label = $HUD/BottomPanel/Margin/HBox/StateBox/StateLabel
