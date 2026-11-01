@@ -15,21 +15,24 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	player.get_node("CameraPivot").rotation.y = -PI * 0.5
 	base_dash_speed = player.dash_speed
-	_add_floor("EntranceYard", Vector3(-20, -0.35, 0), Vector3(12, 0.7, 10))
-	_add_floor("EntranceWalk", Vector3(-10, -0.35, 0), Vector3(12, 0.7, 4))
-	_add_floor("NorthTurn", Vector3(-4, -0.35, -8), Vector3(4, 0.7, 18))
-	_add_floor("TopWalk", Vector3(8, -0.35, -17), Vector3(24, 0.7, 4))
-	_add_floor("RightWalk", Vector3(20, -0.35, -1.5), Vector3(4, 0.7, 31))
-	_add_floor("ReturnWalk", Vector3(10, -0.35, 12), Vector3(20, 0.7, 4))
-	_add_floor("DashLaunch", Vector3(0, -0.35, 12), Vector3(4, 0.7, 4))
-	_add_floor("ExitYard", Vector3(0, -0.35, 24), Vector3(5, 0.7, 4))
+	_add_floor("EntranceYard", Vector3(-20, -0.35, 0), Vector3(8, 0.7, 8))
+	_add_floor("EntranceWalk", Vector3(-14, -0.35, 0), Vector3(8, 0.7, 4))
+	_add_floor("CentralStem", Vector3(-10, -0.35, -2), Vector3(4, 0.7, 24))
+	_add_floor("UpperLeftRun", Vector3(-6, -0.35, -14), Vector3(32, 0.7, 4))
+	_add_floor("LeftRise", Vector3(-22, -0.35, -19.5), Vector3(4, 0.7, 11))
+	_add_floor("LeftEnd", Vector3(-29, -0.35, -25), Vector3(14, 0.7, 4))
+	_add_floor("LeftTip", Vector3(-36, -0.35, -28), Vector3(4, 0.7, 6))
+	_add_floor("UpperRightRun", Vector3(22.5, -0.35, -14), Vector3(15, 0.7, 4))
+	_add_floor("RightRise", Vector3(30, -0.35, -19.5), Vector3(4, 0.7, 11))
+	_add_floor("RightEnd", Vector3(37, -0.35, -25), Vector3(14, 0.7, 4))
+	_add_floor("ExitYard", Vector3(-10, -0.35, 20), Vector3(4, 0.7, 4))
 	_add_atmosphere()
 	_add_halloween_props()
-	_add_pickup(Vector3(-11, 1.0, 0), false)
-	_add_pickup(Vector3(-4, 1.0, -11), false)
-	_add_pickup(Vector3(8, 1.0, -17), false)
-	_add_pickup(Vector3(20, 1.0, 2), false)
-	_add_pickup(Vector3(10, 1.0, 12), true)
+	_add_pickup(Vector3(-36, 1.0, -28), false)
+	_add_pickup(Vector3(-28, 1.0, -25), false)
+	_add_pickup(Vector3(0, 1.0, -14), false)
+	_add_pickup(Vector3(38, 1.0, -25), false)
+	_add_pickup(Vector3(30, 1.0, -20), true)
 	_add_finish()
 	_make_hud()
 	karma_label.text = "Candy karma: 0"
@@ -44,7 +47,9 @@ func _ready() -> void:
 			"Original dash must not cross the final gap")
 		assert(base_dash_speed * 1.5 * player.dash_duration > FINAL_GAP,
 			"Upgraded dash must cross the final gap")
-		assert(22.0 - 14.0 == FINAL_GAP, "Final landing must match dash gate")
+		assert(18.0 - 10.0 == FINAL_GAP, "Lower stem gap must match dash gate")
+		assert(15.0 - 10.0 < base_dash_speed * player.dash_duration,
+			"Upper branch gap must be crossable with the original dash")
 
 
 func _add_floor(floor_name: String, center: Vector3, size: Vector3) -> void:
@@ -74,8 +79,9 @@ func _add_atmosphere() -> void:
 	environment.fog_density = 0.012
 	world.environment = environment
 	add_child(world)
-	for at in [Vector3(-20, 3, 0), Vector3(-4, 3, -12),
-		Vector3(12, 3, -17), Vector3(20, 3, 2), Vector3(0, 3, 24)]:
+	for at in [Vector3(-20, 3, 0), Vector3(-10, 3, -14),
+		Vector3(-30, 3, -25), Vector3(22, 3, -14),
+		Vector3(38, 3, -25), Vector3(-10, 3, 20)]:
 		var glow := OmniLight3D.new()
 		glow.position = at
 		glow.light_color = Color(1.0, 0.38, 0.12)
@@ -85,24 +91,25 @@ func _add_atmosphere() -> void:
 
 
 func _add_halloween_props() -> void:
-	for at in [Vector3(-23.5, 0, 3.4), Vector3(-16.5, 0, -3.4),
-		Vector3(-5.4, 0, -7), Vector3(2, 0, -18.4),
-		Vector3(18.6, 0, -14), Vector3(21.4, 0, -2),
-		Vector3(19, 0, 11), Vector3(1.5, 0, 12.9)]:
+	for at in [Vector3(-22.8, 0, -2.7), Vector3(-17, 0, 2.7),
+		Vector3(-11.4, 0, -8), Vector3(-20.5, 0, -14.8),
+		Vector3(-27, 0, -25.8), Vector3(-35, 0, -29.7),
+		Vector3(5, 0, -15.4), Vector3(18, 0, -12.7),
+		Vector3(29, 0, -19), Vector3(40, 0, -26)]:
 		_add_pumpkin(at)
-	for at in [Vector3(-24.5, 0, -3.7), Vector3(-2.6, 0, -12.5),
-		Vector3(19, 0, 5)]:
+	for at in [Vector3(-23.3, 0, 2.8), Vector3(-21.1, 0, -23.9),
+		Vector3(23, 0, -15.3)]:
 		_add_gravestone(at)
-	_add_house(Vector3(-23.2, 0, -1.0), Vector3(3.2, 2.8, 2.0))
-	_add_house(Vector3(7.0, 0, -20.5), Vector3(4.0, 3.0, 2.4))
-	_add_house(Vector3(23.0, 0, 2.0), Vector3(2.0, 3.3, 4.0))
-	_add_sign(Vector3(-20, 3.0, -4.5), "TRICK OR TREAT")
-	_add_sign(Vector3(0, 3.0, 23), "THE WAY OUT")
+	_add_house(Vector3(-22.3, 0, 3.0), Vector3(2.8, 2.8, 2.0))
+	_add_house(Vector3(-36, 0, -32), Vector3(3.2, 3.0, 2.2))
+	_add_house(Vector3(43.5, 0, -25), Vector3(2.8, 3.3, 2.0))
+	_add_sign(Vector3(-20, 3.0, -3.0), "TRICK OR TREAT")
+	_add_sign(Vector3(-10, 3.0, 19.0), "THE WAY OUT")
 	# The lighted posts mark the launch edge without filling the gap.
-	for x in [-1.65, 1.65]:
-		_rod(Vector3(x, 0, 13.6), Vector3(x, 1.4, 13.6),
+	for x in [-11.65, -8.35]:
+		_rod(Vector3(x, 0, 9.6), Vector3(x, 1.4, 9.6),
 			0.08, Color(0.41, 0.28, 0.26))
-		_visual_box(Vector3(x, 1.5, 13.6), Vector3(0.32, 0.23, 0.32),
+		_visual_box(Vector3(x, 1.5, 9.6), Vector3(0.32, 0.23, 0.32),
 			Color(0.88, 0.37, 0.1))
 
 
@@ -247,11 +254,11 @@ func _collect(body: Node3D, area: Area3D, is_story: bool) -> void:
 
 func _add_finish() -> void:
 	var pale := Color(0.88, 0.78, 1.0)
-	_visual_box(Vector3(-1.4, 1.7, 25), Vector3(0.18, 3.4, 0.25), pale)
-	_visual_box(Vector3(1.4, 1.7, 25), Vector3(0.18, 3.4, 0.25), pale)
-	_visual_box(Vector3(0, 3.4, 25), Vector3(3.0, 0.18, 0.25), pale)
+	_visual_box(Vector3(-11.4, 1.7, 21), Vector3(0.18, 3.4, 0.25), pale)
+	_visual_box(Vector3(-8.6, 1.7, 21), Vector3(0.18, 3.4, 0.25), pale)
+	_visual_box(Vector3(-10, 3.4, 21), Vector3(3.0, 0.18, 0.25), pale)
 	var area := Area3D.new()
-	area.position = Vector3(0, 1.2, 25)
+	area.position = Vector3(-10, 1.2, 21)
 	area.collision_layer = 0
 	area.collision_mask = 1
 	var shape := BoxShape3D.new()
@@ -262,7 +269,7 @@ func _add_finish() -> void:
 	add_child(area)
 	area.body_entered.connect(_on_finish)
 	var glow := OmniLight3D.new()
-	glow.position = Vector3(0, 2.4, 24.5)
+	glow.position = Vector3(-10, 2.4, 20.5)
 	glow.light_color = pale
 	glow.light_energy = 1.5
 	glow.omni_range = 7.0

@@ -85,71 +85,64 @@ func _add_snow_surface(body: StaticBody3D, size: Vector3) -> void:
 	noise.frequency = 0.18
 	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
 	noise.fractal_octaves = 3
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var x_steps := maxi(2, ceili(size.x / 0.32))
 	var z_steps := maxi(2, ceili(size.z / 0.32))
+	var stride := z_steps + 1
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
+	for x_index in range(x_steps + 1):
+		for z_index in range(z_steps + 1):
+			var point := _snow_vertex(body, size, noise, x_index, z_index, x_steps, z_steps)
+			vertices.append(point)
+			var snow_depth := point.y - size.y * 0.5
+			colors.append(Color(0.94, 0.97, 1.0).lerp(
+				Color(0.71, 0.8, 0.91), clampf(snow_depth * 0.38, 0.0, 0.3)))
+	for x_index in range(x_steps + 1):
+		for z_index in range(z_steps + 1):
+			var left := vertices[maxi(0, x_index - 1) * stride + z_index]
+			var right := vertices[mini(x_steps, x_index + 1) * stride + z_index]
+			var back := vertices[x_index * stride + maxi(0, z_index - 1)]
+			var front := vertices[x_index * stride + mini(z_steps, z_index + 1)]
+			normals.append((front - back).cross(right - left).normalized())
 	for x_index in range(x_steps):
 		for z_index in range(z_steps):
-			var a := _snow_vertex(body, size, noise, x_index, z_index, x_steps, z_steps)
-			var b := _snow_vertex(body, size, noise, x_index + 1, z_index, x_steps, z_steps)
-			var c := _snow_vertex(body, size, noise, x_index, z_index + 1, x_steps, z_steps)
-			var d := _snow_vertex(body, size, noise, x_index + 1, z_index + 1, x_steps, z_steps)
-			for point in [a, c, b, b, c, d]:
-				var snow_depth: float = point.y - size.y * 0.5
-				surface.set_color(Color(0.94, 0.97, 1.0).lerp(
-					Color(0.71, 0.8, 0.91), clampf(snow_depth * 0.38, 0.0, 0.3)))
-				surface.add_vertex(point)
-	surface.generate_normals()
+			var a := x_index * stride + z_index
+			var b := (x_index + 1) * stride + z_index
+			var c := a + 1
+			var d := b + 1
+			indices.append_array(PackedInt32Array([a, c, b, b, c, d]))
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var terrain := ArrayMesh.new()
+	terrain.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	var snow := MeshInstance3D.new()
 	snow.name = "UnevenSnow"
-	snow.mesh = surface.commit()
+	snow.mesh = terrain
 	var material := StandardMaterial3D.new()
 	material.vertex_color_use_as_albedo = true
 	material.roughness = 1.0
 	snow.material_override = material
 	body.add_child(snow)
-	var snow_collision := CollisionShape3D.new()
-	snow_collision.name = "SnowTerrainCollision"
-	snow_collision.shape = snow.mesh.create_trimesh_shape()
-	body.add_child(snow_collision)
 
 
 func _snow_vertex(body: StaticBody3D, size: Vector3, noise: FastNoiseLite,
 		x_index: int, z_index: int, x_steps: int, z_steps: int) -> Vector3:
 	var x := (float(x_index) / x_steps - 0.5) * size.x
 	var z := (float(z_index) / z_steps - 0.5) * size.z
-	var ripple := noise.get_noise_2d(body.position.x + x, body.position.z + z)
-	var fine := noise.get_noise_2d((body.position.x + x) * 3.1,
-		(body.position.z + z) * 3.1)
-	var edge_distance := minf(size.x * 0.5 - absf(x), size.z * 0.5 - absf(z))
-	var edge_lift := maxf(0.0, 0.65 - edge_distance) * 0.055
-	var clumps := _snow_clump_height(body, size, noise, x, z)
-	var height := size.y * 0.5 + 0.045 + ripple * 0.045 + fine * 0.014 + edge_lift + clumps
+	var world_x := body.position.x + x
+	var world_z := body.position.z + z
+	var main_drift := 0.5 + 0.5 * sin(world_x * 0.33 + 0.65 * sin(world_z * 0.22))
+	var crossing_drift := 0.5 + 0.5 * sin(world_z * 0.55 - world_x * 0.21)
+	var fine := noise.get_noise_2d(world_x * 1.8, world_z * 1.8)
+	var height := (size.y * 0.5 + 0.035 + 0.28 * main_drift
+		+ 0.12 * crossing_drift + 0.025 * fine)
 	return Vector3(x, height, z)
-
-
-func _snow_clump_height(body: StaticBody3D, size: Vector3, noise: FastNoiseLite,
-		x: float, z: float) -> float:
-	var height := 0.0
-	var clumps := [
-		Vector3(-0.34, 0.82, -0.18),
-		Vector3(0.34, 0.67, 0.22),
-		Vector3(-0.37, 0.55, 0.30),
-		Vector3(0.37, 0.48, -0.30),
-	]
-	for clump in clumps:
-		var center_x: float = clump.x * size.x
-		var center_z: float = clump.z * size.z
-		var radius_x := minf(2.5, size.x * 0.20)
-		var radius_z := minf(2.5, size.z * 0.30)
-		var warp := noise.get_noise_2d(body.position.x + x + 19.0,
-			body.position.z + z - 11.0) * 0.13
-		var distance := (pow((x - center_x) / radius_x, 2.0)
-			+ pow((z - center_z) / radius_z, 2.0) + warp)
-		var blend := maxf(0.0, 1.0 - distance)
-		height += clump.y * blend * blend * (3.0 - 2.0 * blend)
-	return minf(height, 0.85)
 
 
 func _add_pickup(at: Vector3, is_story: bool) -> void:
