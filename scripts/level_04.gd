@@ -43,8 +43,8 @@ func _ready() -> void:
 	_on_dash_changed(0.0, player.dash_cooldown_max, true)
 	player.jump_charge_changed.connect(_on_jump_charge)
 	if OS.is_debug_build():
-		assert(is_equal_approx(player.dash_speed, 37.5),
-			"Level 4 must carry the Level 3 dash upgrade")
+		assert(is_equal_approx(player.dash_speed, 25.0),
+			"Level 4 must reset the Level 3 dash upgrade")
 		assert(not player.wall_run_unlocked, "Wall Run unlocks later")
 
 
