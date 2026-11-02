@@ -600,8 +600,21 @@ func _process(delta: float) -> void:
 	if not get_tree().paused:
 		_animate_christmas_lights(delta)
 	if not completed and player.global_position.y < -5.0:
-		set_process(false)
-		get_tree().call_deferred("reload_current_scene")
+		_respawn_in_place()
+
+
+func _respawn_in_place() -> void:
+	player.respawn(SPAWN)
+	player.get_node("CameraPivot").rotation.y = -PI / 2.0
+	player.get_node("CameraPivot/SpringArm3D").rotation.x = 0.0
+	player.get_node("Visuals").rotation = Vector3.ZERO
+	karma_collected = 0
+	karma_label.text = "Karma: 0"
+	karma_choices.reset_interactions()
+	if story_found:
+		_add_pickup(Vector3(20, 1, 7), true)
+	story_found = false
+	story_label.text = "Story item: not found"
 
 
 func _animate_christmas_lights(delta: float) -> void:

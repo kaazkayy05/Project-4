@@ -73,6 +73,7 @@ var buffered_jump_velocity: float = 0.0
 var mat_body: StandardMaterial3D
 var mat_visor: StandardMaterial3D
 var ghost_materials: Array[Dictionary] = []
+var skip_next_mouse_motion := false
 
 func _init() -> void:
 	_setup_inputs()
@@ -81,6 +82,7 @@ func _ready() -> void:
 	_setup_inputs()
 	_setup_materials()
 	_apply_level_character()
+	skip_next_mouse_motion = OS.has_feature("web")
 	dash_cooldown = 0.0
 	emit_signal("dash_cooldown_changed", dash_cooldown, dash_cooldown_max, true)
 	emit_signal("jump_charge_changed", 0.0, false)
@@ -183,9 +185,21 @@ func _apply_level_character() -> void:
 	mesh_visor.hide()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if OS.has_feature("web") and event is InputEventMouseButton \
+			and event.pressed and event.button_index == MOUSE_BUTTON_LEFT \
+			and not get_tree().paused:
+		if JavaScriptBridge.eval("document.pointerLockElement !== null") != true:
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			skip_next_mouse_motion = true
+			get_viewport().set_input_as_handled()
+		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		camera_pivot.rotate_y(-event.relative.x * mouse_sensitivity)
-		spring_arm.rotate_x(-event.relative.y * mouse_sensitivity)
+		if skip_next_mouse_motion:
+			skip_next_mouse_motion = false
+			return
+		camera_pivot.rotate_y(-event.screen_relative.x * mouse_sensitivity)
+		spring_arm.rotate_x(-event.screen_relative.y * mouse_sensitivity)
 		spring_arm.rotation.x = clamp(spring_arm.rotation.x, deg_to_rad(-75.0), deg_to_rad(60.0))
 
 func _physics_process(delta: float) -> void:
