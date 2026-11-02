@@ -136,4 +136,5 @@ func _on_finish(body: Node3D) -> void:
 
 func _process(_delta: float) -> void:
 	if not completed and player.global_position.y < -5.0:
-		player.respawn(FUNERAL_SPAWN)
+		set_process(false)
+		get_tree().call_deferred("reload_current_scene")

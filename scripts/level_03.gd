@@ -1,7 +1,6 @@
 extends "res://scripts/level_02.gd"
 
 const HALLOWEEN_SPAWN := Vector3(-20, 0.1, 0)
-const REQUIRED_COLLECTIBLES := 5
 const FINAL_GAP := 8.0
 const HALLOWEEN_MODELS: PackedScene = preload("res://Models/HALLOWEEN_STREET_10_HOUSES_5_TREES.glb")
 const SIDEWALK_WIDTH := 1.2
@@ -27,7 +26,6 @@ const WALKABLE_RECTS := [
 	Rect2(-12, 18, 4, 4),
 ]
 
-var collected_items := 0
 var dash_upgraded := false
 var base_dash_speed := 0.0
 var upgrade_label: Label
@@ -38,6 +36,13 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	player.get_node("CameraPivot").rotation.y = -PI * 0.5
 	base_dash_speed = player.dash_speed
+	karma_choices = KARMA_CHOICE.new()
+	add_child(karma_choices)
+	karma_choices.setup(player,
+		"res://assets/karma pictures/Taking One Candy on Halloween.png",
+		"res://assets/karma pictures/Overflowing Halloween Candy Grab.png",
+		Rect2(0, 0, 900, 1254), Rect2(0, 0, 950, 1254))
+	karma_choices.choice_made.connect(_on_karma_choice)
 	_add_floor("EntranceYard", Vector3(-20, -0.35, 0), Vector3(8, 0.7, 8))
 	_add_floor("EntranceWalk", Vector3(-14, -0.35, 0), Vector3(8, 0.7, 4))
 	_add_floor("CentralStem", Vector3(-10, -0.35, -2), Vector3(4, 0.7, 24))
@@ -51,14 +56,10 @@ func _ready() -> void:
 	_add_floor("ExitYard", Vector3(-10, -0.35, 20), Vector3(4, 0.7, 4))
 	_add_atmosphere()
 	_add_halloween_props()
-	_add_pickup(Vector3(-36, 1.0, -28), false)
-	_add_pickup(Vector3(-28, 1.0, -25), false)
-	_add_pickup(Vector3(0, 1.0, -14), false)
-	_add_pickup(Vector3(38, 1.0, -25), false)
 	_add_pickup(Vector3(30, 1.0, -20), true)
 	_add_finish()
 	_make_hud()
-	karma_label.text = "Candy karma: 0"
+	karma_label.text = "Karma: 0"
 	completion_label.text = "LEVEL 3 COMPLETE"
 	completion_label.position.y = 142
 	upgrade_label = _label(dash_label.get_parent(), "DASH DISTANCE +50%", Vector2(20, 105))
@@ -235,6 +236,19 @@ func _add_neighborhood_screen() -> void:
 		house.scale = Vector3.ONE * house_scale
 		add_child(house)
 		_make_model_walkway_walkable(house)
+		var door_at := Vector3(edge.x, 0, edge.y) + Vector3(outward.x, 0, outward.y) * 6.5
+		for piece in house.get_children():
+			if piece.name.begins_with("FRONT DOOR"):
+				door_at = house.to_global(piece.position)
+				break
+		var roadward := Vector3(outward.x, 0, outward.y)
+		var bell_at := door_at - roadward * 0.2 + Vector3(-roadward.z, 0, roadward.x) * 0.75
+		bell_at.y = 1.3
+		var bell := SphereMesh.new()
+		bell.radius = 0.13
+		bell.height = 0.26
+		_pickup_visual(self, bell, bell_at, Color(1.0, 0.68, 0.18))
+		karma_choices.add_interaction(door_at - roadward * 1.0)
 	var tree_index := 0
 	for frontage in frontages:
 		var start: Vector2 = frontage[0]
@@ -463,17 +477,21 @@ func _collect(body: Node3D, area: Area3D, is_story: bool) -> void:
 		return
 	area.set_deferred("monitoring", false)
 	area.queue_free()
-	collected_items += 1
 	if is_story:
 		story_found = true
 		story_label.text = "Story item: torn Halloween photo"
 	else:
 		karma_collected += 1
 		karma_label.text = "Candy karma: %d" % karma_collected
-	if collected_items == REQUIRED_COLLECTIBLES:
-		dash_upgraded = true
-		player.dash_speed = base_dash_speed * 1.5
-		upgrade_label.show()
+
+
+func _on_karma_choice(amount: int) -> void:
+	karma_collected += amount
+	karma_label.text = "Karma: %d" % karma_collected
+	dash_upgraded = karma_collected > 50
+	player.dash_speed = base_dash_speed * (1.5 if dash_upgraded else 1.0)
+	upgrade_label.text = "DASH DISTANCE +50%"
+	upgrade_label.visible = dash_upgraded
 
 
 func _add_finish() -> void:
@@ -504,7 +522,7 @@ func _on_finish(body: Node3D) -> void:
 	if body != player or completed:
 		return
 	if not dash_upgraded:
-		upgrade_label.text = "COLLECT ALL CANDY AND THE STORY ITEM"
+		upgrade_label.text = "KARMA MUST BE ABOVE 50"
 		upgrade_label.show()
 		return
 	completed = true
@@ -514,4 +532,5 @@ func _on_finish(body: Node3D) -> void:
 
 func _process(_delta: float) -> void:
 	if not completed and player.global_position.y < -5.0:
-		player.respawn(HALLOWEEN_SPAWN)
+		set_process(false)
+		get_tree().call_deferred("reload_current_scene")

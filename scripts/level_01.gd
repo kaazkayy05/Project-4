@@ -3,6 +3,7 @@ extends Node3D
 const SPAWN := Vector3(-27, 0.1, 0)
 const SETTINGS_PATH := "user://settings.cfg"
 const ADMIN_LEVEL_SELECT = preload("res://scripts/admin_level_select.gd")
+const KARMA_CHOICE = preload("res://scripts/karma_choice.gd")
 const TREE_TIERS := [
 	Vector3(3.5, 4.2, 5.2),
 	Vector3(5.6, 3.5, 4.8),
@@ -21,6 +22,7 @@ var pause_menu: Control
 var settings_box: VBoxContainer
 var sensitivity_slider: HSlider
 var karma_collected := 0
+var karma_choices
 var story_found := false
 var completed := false
 
@@ -29,6 +31,13 @@ func _ready() -> void:
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	player.get_node("CameraPivot").rotation.y = -PI / 2.0
+	karma_choices = KARMA_CHOICE.new()
+	add_child(karma_choices)
+	karma_choices.setup(player,
+		"res://assets/karma pictures/A Christmas gift to share.png",
+		"res://assets/karma pictures/A Child Opens a Christmas Present.png",
+		Rect2(0, 0, 1254, 1254), Rect2(0, 0, 1254, 1254))
+	karma_choices.choice_made.connect(_on_karma_choice)
 
 	_add_box("StartRun", Vector3(-19.7, -0.35, 0), Vector3(20.6, 0.7, 4))
 	_add_box("FirstLanding", Vector3(0.5, -0.35, 0), Vector3(10.6, 0.7, 4))
@@ -44,8 +53,6 @@ func _ready() -> void:
 	_add_sky_lights()
 	_add_exit_door()
 
-	_add_pickup(Vector3(-17, 1, 0), false)
-	_add_pickup(Vector3(15, 1, -13.8), false)
 	_add_pickup(Vector3(20, 1, 7), true)
 
 	var exit_area := Area3D.new()
@@ -184,6 +191,11 @@ func _collect(body: Node3D, area: Area3D, is_story: bool) -> void:
 	else:
 		karma_collected += 1
 		karma_label.text = "Karma collected: %d" % karma_collected
+
+
+func _on_karma_choice(amount: int) -> void:
+	karma_collected += amount
+	karma_label.text = "Karma: %d" % karma_collected
 
 
 func _visual_box(parent: Node3D, at: Vector3, size: Vector3, color: Color) -> void:
@@ -435,6 +447,7 @@ func _add_christmas_decorations() -> void:
 	]
 	for gift in gifts:
 		_add_present(gift[0], gift[1], gift[2])
+		karma_choices.add_interaction(gift[0])
 	_add_candy_cane(Vector3(-27, 0, -1.45))
 	_add_candy_cane(Vector3(4.35, 0, -4.1))
 	_add_candy_cane(Vector3(18.45, 0, 5.0))
@@ -577,7 +590,8 @@ func _on_exit(body: Node3D) -> void:
 
 func _process(_delta: float) -> void:
 	if not completed and player.global_position.y < -5.0:
-		player.respawn(SPAWN)
+		set_process(false)
+		get_tree().call_deferred("reload_current_scene")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -617,7 +631,7 @@ func _make_hud() -> void:
 	add_child(hud)
 
 	dash_label = _label(hud, "DASH READY [SHIFT]", Vector2(20, 20))
-	karma_label = _label(hud, "Karma collected: 0", Vector2(20, 48))
+	karma_label = _label(hud, "Karma: 0", Vector2(20, 48))
 	story_label = _label(hud, "Story item: not found", Vector2(20, 76))
 	completion_label = _label(hud, "LEVEL 1 COMPLETE", Vector2(20, 112))
 	completion_label.hide()
