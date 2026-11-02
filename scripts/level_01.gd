@@ -406,6 +406,8 @@ func _add_winter_atmosphere() -> void:
 	var flake := SphereMesh.new()
 	flake.radius = 0.035
 	flake.height = 0.07
+	flake.radial_segments = 6
+	flake.rings = 4
 	for origin in [Vector3(-14, 10, -2), Vector3(14, 10, -2)]:
 		var snow := CPUParticles3D.new()
 		snow.position = origin

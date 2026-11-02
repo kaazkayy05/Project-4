@@ -29,6 +29,8 @@ const WALKABLE_RECTS := [
 var dash_upgraded := false
 var base_dash_speed := 0.0
 var upgrade_label: Label
+var scenery_roots: Array[Node3D] = []
+var scenery_visibility_timer := 0.0
 
 
 func _ready() -> void:
@@ -56,6 +58,7 @@ func _ready() -> void:
 	_add_floor("ExitYard", Vector3(-10, -0.35, 20), Vector3(4, 0.7, 4))
 	_add_atmosphere()
 	_add_halloween_props()
+	_update_scenery_visibility()
 	_add_pickup(Vector3(30, 1.0, -20), true)
 	_add_finish()
 	_make_hud()
@@ -235,6 +238,7 @@ func _add_neighborhood_screen() -> void:
 		house.rotation.y = atan2(-outward.x, -outward.y)
 		house.scale = Vector3.ONE * house_scale
 		add_child(house)
+		scenery_roots.append(house)
 		_make_model_walkway_walkable(house)
 		var door_at := Vector3(edge.x, 0, edge.y) + Vector3(outward.x, 0, outward.y) * 6.5
 		for piece in house.get_children():
@@ -280,6 +284,7 @@ func _add_neighborhood_screen() -> void:
 			tree.rotation.y = float(tree_index % 7) * 0.43
 			tree.scale = Vector3.ONE * 0.45
 			add_child(tree)
+			scenery_roots.append(tree)
 			tree_index += 1
 	for template in tree_models.values():
 		template.free()
@@ -530,7 +535,16 @@ func _on_finish(body: Node3D) -> void:
 	get_tree().call_deferred("change_scene_to_file", "res://scenes/level_04.tscn")
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	scenery_visibility_timer -= delta
+	if scenery_visibility_timer <= 0.0:
+		scenery_visibility_timer = 0.25
+		_update_scenery_visibility()
 	if not completed and player.global_position.y < -5.0:
 		set_process(false)
 		get_tree().call_deferred("reload_current_scene")
+
+
+func _update_scenery_visibility() -> void:
+	for root in scenery_roots:
+		root.visible = player.global_position.distance_squared_to(root.global_position) <= 45.0 * 45.0
