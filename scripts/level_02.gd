@@ -2,6 +2,8 @@ extends Node3D
 
 const SPAWN := Vector3(0, 0.1, 4)
 const SETTINGS_PATH := "user://settings.cfg"
+const ADMIN_LEVEL_SELECT = preload("res://scripts/admin_level_select.gd")
+const KARMA_CHOICE = preload("res://scripts/karma_choice.gd")
 
 @onready var player: Player3D = $Player3D
 
@@ -13,6 +15,7 @@ var pause_menu: Control
 var settings_box: VBoxContainer
 var sensitivity_slider: HSlider
 var karma_collected := 0
+var karma_choices
 var story_found := false
 var completed := false
 
@@ -21,6 +24,13 @@ func _ready() -> void:
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	player.get_node("CameraPivot").rotation.y = PI
+	karma_choices = KARMA_CHOICE.new()
+	add_child(karma_choices)
+	karma_choices.setup(player,
+		"res://assets/karma pictures/Child places clothes in donation box.png",
+		"res://assets/karma pictures/Walking Away With Donated Clothes.png",
+		Rect2(0, 0, 1254, 740), Rect2(0, 0, 750, 1254))
+	karma_choices.choice_made.connect(_on_karma_choice)
 	_add_floor("DropOff", Vector3(0, -0.35, 7), Vector3(18, 0.7, 16))
 	_add_floor("Sorting", Vector3(0, -0.35, 32.5), Vector3(18, 0.7, 23))
 	_add_floor("ExitHall", Vector3(0, -0.35, 61.5), Vector3(18, 0.7, 25))
@@ -29,8 +39,6 @@ func _ready() -> void:
 	_add_walls()
 	_add_atmosphere()
 	_add_donation_props()
-	_add_pickup(Vector3(-3, 1, 27), false)
-	_add_pickup(Vector3(2, 1, 57), false)
 	_add_pickup(Vector3(30, 1, 35), true)
 	_add_finish()
 	_make_hud()
@@ -153,6 +161,7 @@ func _add_donation_props() -> void:
 		Vector3(-6.5, 0, 55), Vector3(6.5, 0, 65),
 		Vector3(27, 0, 28.5)]:
 		_add_clothing_rack(rack, 4.5)
+		karma_choices.add_interaction(rack)
 	for box_at in [Vector3(-4.5, 0, 5), Vector3(4.5, 0, 7),
 		Vector3(5.5, 0, 29), Vector3(24, 0, 37), Vector3(35, 0, 28)]:
 		_add_donation_box(box_at)
@@ -243,6 +252,11 @@ func _collect(body: Node3D, area: Area3D, is_story: bool) -> void:
 		karma_label.text = "Karma collected: %d" % karma_collected
 
 
+func _on_karma_choice(amount: int) -> void:
+	karma_collected += amount
+	karma_label.text = "Karma: %d" % karma_collected
+
+
 func _add_finish() -> void:
 	var white := Color(0.86, 0.92, 1.0)
 	_visual_box(Vector3(-1.4, 1.7, 71.5), Vector3(0.18, 3.4, 0.3), white)
@@ -271,7 +285,8 @@ func _on_finish(body: Node3D) -> void:
 
 func _process(_delta: float) -> void:
 	if not completed and player.global_position.y < -5.0:
-		player.respawn(SPAWN)
+		set_process(false)
+		get_tree().call_deferred("reload_current_scene")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -298,7 +313,7 @@ func _make_hud() -> void:
 	var hud := CanvasLayer.new()
 	add_child(hud)
 	dash_label = _label(hud, "DASH READY [SHIFT]", Vector2(20, 20))
-	karma_label = _label(hud, "Karma collected: 0", Vector2(20, 48))
+	karma_label = _label(hud, "Karma: 0", Vector2(20, 48))
 	story_label = _label(hud, "Story item: not found", Vector2(20, 76))
 	completion_label = _label(hud, "LEVEL 2 COMPLETE", Vector2(20, 112))
 	completion_label.hide()
@@ -313,6 +328,7 @@ func _make_hud() -> void:
 	panel.add_child(options)
 	_button(options, "Resume", _toggle_pause)
 	_button(options, "Settings", func() -> void: settings_box.show())
+	options.add_child(ADMIN_LEVEL_SELECT.new())
 	_button(options, "Return to Main Menu", _return_to_menu)
 	settings_box = VBoxContainer.new()
 	settings_box.hide()

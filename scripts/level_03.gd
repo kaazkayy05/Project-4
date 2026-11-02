@@ -1,7 +1,6 @@
 extends "res://scripts/level_02.gd"
 
 const HALLOWEEN_SPAWN := Vector3(-20, 0.1, 0)
-const REQUIRED_COLLECTIBLES := 5
 const FINAL_GAP := 8.0
 const HALLOWEEN_MODELS: PackedScene = preload("res://Models/HALLOWEEN_STREET_10_HOUSES_5_TREES.glb")
 const SIDEWALK_WIDTH := 1.2
@@ -27,10 +26,11 @@ const WALKABLE_RECTS := [
 	Rect2(-12, 18, 4, 4),
 ]
 
-var collected_items := 0
 var dash_upgraded := false
 var base_dash_speed := 0.0
 var upgrade_label: Label
+var scenery_roots: Array[Node3D] = []
+var scenery_visibility_timer := 0.0
 
 
 func _ready() -> void:
@@ -38,6 +38,13 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	player.get_node("CameraPivot").rotation.y = -PI * 0.5
 	base_dash_speed = player.dash_speed
+	karma_choices = KARMA_CHOICE.new()
+	add_child(karma_choices)
+	karma_choices.setup(player,
+		"res://assets/karma pictures/Taking One Candy on Halloween.png",
+		"res://assets/karma pictures/Overflowing Halloween Candy Grab.png",
+		Rect2(0, 0, 900, 1254), Rect2(0, 0, 950, 1254))
+	karma_choices.choice_made.connect(_on_karma_choice)
 	_add_floor("EntranceYard", Vector3(-20, -0.35, 0), Vector3(8, 0.7, 8))
 	_add_floor("EntranceWalk", Vector3(-14, -0.35, 0), Vector3(8, 0.7, 4))
 	_add_floor("CentralStem", Vector3(-10, -0.35, -2), Vector3(4, 0.7, 24))
@@ -51,14 +58,11 @@ func _ready() -> void:
 	_add_floor("ExitYard", Vector3(-10, -0.35, 20), Vector3(4, 0.7, 4))
 	_add_atmosphere()
 	_add_halloween_props()
-	_add_pickup(Vector3(-36, 1.0, -28), false)
-	_add_pickup(Vector3(-28, 1.0, -25), false)
-	_add_pickup(Vector3(0, 1.0, -14), false)
-	_add_pickup(Vector3(38, 1.0, -25), false)
+	_update_scenery_visibility()
 	_add_pickup(Vector3(30, 1.0, -20), true)
 	_add_finish()
 	_make_hud()
-	karma_label.text = "Candy karma: 0"
+	karma_label.text = "Karma: 0"
 	completion_label.text = "LEVEL 3 COMPLETE"
 	completion_label.position.y = 142
 	upgrade_label = _label(dash_label.get_parent(), "DASH DISTANCE +50%", Vector2(20, 105))
@@ -140,11 +144,11 @@ func _add_atmosphere() -> void:
 	environment.background_color = Color(0.016, 0.009, 0.035)
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.4, 0.32, 0.58)
-	environment.ambient_light_energy = 0.4
+	environment.ambient_light_energy = 0.18
 	environment.ambient_light_sky_contribution = 0.0
 	environment.fog_enabled = true
 	environment.fog_light_color = Color(0.2, 0.1, 0.28)
-	environment.fog_density = 0.012
+	environment.fog_density = 0.060
 	world.environment = environment
 	add_child(world)
 	for at in [Vector3(-20, 3, 0), Vector3(-10, 3, -14),
@@ -234,7 +238,21 @@ func _add_neighborhood_screen() -> void:
 		house.rotation.y = atan2(-outward.x, -outward.y)
 		house.scale = Vector3.ONE * house_scale
 		add_child(house)
+		scenery_roots.append(house)
 		_make_model_walkway_walkable(house)
+		var door_at := Vector3(edge.x, 0, edge.y) + Vector3(outward.x, 0, outward.y) * 6.5
+		for piece in house.get_children():
+			if piece.name.begins_with("FRONT DOOR"):
+				door_at = house.to_global(piece.position)
+				break
+		var roadward := Vector3(outward.x, 0, outward.y)
+		var bell_at := door_at - roadward * 0.2 + Vector3(-roadward.z, 0, roadward.x) * 0.75
+		bell_at.y = 1.3
+		var bell := SphereMesh.new()
+		bell.radius = 0.13
+		bell.height = 0.26
+		_pickup_visual(self, bell, bell_at, Color(1.0, 0.68, 0.18))
+		karma_choices.add_interaction(door_at - roadward * 1.0)
 	var tree_index := 0
 	for frontage in frontages:
 		var start: Vector2 = frontage[0]
@@ -266,6 +284,7 @@ func _add_neighborhood_screen() -> void:
 			tree.rotation.y = float(tree_index % 7) * 0.43
 			tree.scale = Vector3.ONE * 0.45
 			add_child(tree)
+			scenery_roots.append(tree)
 			tree_index += 1
 	for template in tree_models.values():
 		template.free()
@@ -463,17 +482,21 @@ func _collect(body: Node3D, area: Area3D, is_story: bool) -> void:
 		return
 	area.set_deferred("monitoring", false)
 	area.queue_free()
-	collected_items += 1
 	if is_story:
 		story_found = true
 		story_label.text = "Story item: torn Halloween photo"
 	else:
 		karma_collected += 1
 		karma_label.text = "Candy karma: %d" % karma_collected
-	if collected_items == REQUIRED_COLLECTIBLES:
-		dash_upgraded = true
-		player.dash_speed = base_dash_speed * 1.5
-		upgrade_label.show()
+
+
+func _on_karma_choice(amount: int) -> void:
+	karma_collected += amount
+	karma_label.text = "Karma: %d" % karma_collected
+	dash_upgraded = karma_collected > 50
+	player.dash_speed = base_dash_speed * (1.5 if dash_upgraded else 1.0)
+	upgrade_label.text = "DASH DISTANCE +50%"
+	upgrade_label.visible = dash_upgraded
 
 
 func _add_finish() -> void:
@@ -504,16 +527,24 @@ func _on_finish(body: Node3D) -> void:
 	if body != player or completed:
 		return
 	if not dash_upgraded:
-		upgrade_label.text = "COLLECT ALL CANDY AND THE STORY ITEM"
+		upgrade_label.text = "KARMA MUST BE ABOVE 50"
 		upgrade_label.show()
 		return
 	completed = true
 	player.set_physics_process(false)
-	completion_label.text = "LEVEL 3 COMPLETE | CANDY KARMA %d" % karma_collected
-	completion_label.show()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	get_tree().call_deferred("change_scene_to_file", "res://scenes/level_04.tscn")
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	scenery_visibility_timer -= delta
+	if scenery_visibility_timer <= 0.0:
+		scenery_visibility_timer = 0.25
+		_update_scenery_visibility()
 	if not completed and player.global_position.y < -5.0:
-		player.respawn(HALLOWEEN_SPAWN)
+		set_process(false)
+		get_tree().call_deferred("reload_current_scene")
+
+
+func _update_scenery_visibility() -> void:
+	for root in scenery_roots:
+		root.visible = player.global_position.distance_squared_to(root.global_position) <= 45.0 * 45.0

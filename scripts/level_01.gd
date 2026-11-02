@@ -2,6 +2,8 @@ extends Node3D
 
 const SPAWN := Vector3(-27, 0.1, 0)
 const SETTINGS_PATH := "user://settings.cfg"
+const ADMIN_LEVEL_SELECT = preload("res://scripts/admin_level_select.gd")
+const KARMA_CHOICE = preload("res://scripts/karma_choice.gd")
 const TREE_TIERS := [
 	Vector3(3.5, 4.2, 5.2),
 	Vector3(5.6, 3.5, 4.8),
@@ -20,6 +22,9 @@ var pause_menu: Control
 var settings_box: VBoxContainer
 var sensitivity_slider: HSlider
 var karma_collected := 0
+var karma_choices
+var christmas_bulbs: Array[Dictionary] = []
+var light_show_time := 0.0
 var story_found := false
 var completed := false
 
@@ -28,6 +33,13 @@ func _ready() -> void:
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	player.get_node("CameraPivot").rotation.y = -PI / 2.0
+	karma_choices = KARMA_CHOICE.new()
+	add_child(karma_choices)
+	karma_choices.setup(player,
+		"res://assets/karma pictures/A Christmas gift to share.png",
+		"res://assets/karma pictures/A Child Opens a Christmas Present.png",
+		Rect2(0, 0, 1254, 1254), Rect2(0, 0, 1254, 1254))
+	karma_choices.choice_made.connect(_on_karma_choice)
 
 	_add_box("StartRun", Vector3(-19.7, -0.35, 0), Vector3(20.6, 0.7, 4))
 	_add_box("FirstLanding", Vector3(0.5, -0.35, 0), Vector3(10.6, 0.7, 4))
@@ -43,8 +55,6 @@ func _ready() -> void:
 	_add_sky_lights()
 	_add_exit_door()
 
-	_add_pickup(Vector3(-17, 1, 0), false)
-	_add_pickup(Vector3(15, 1, -13.8), false)
 	_add_pickup(Vector3(20, 1, 7), true)
 
 	var exit_area := Area3D.new()
@@ -183,6 +193,11 @@ func _collect(body: Node3D, area: Area3D, is_story: bool) -> void:
 	else:
 		karma_collected += 1
 		karma_label.text = "Karma collected: %d" % karma_collected
+
+
+func _on_karma_choice(amount: int) -> void:
+	karma_collected += amount
+	karma_label.text = "Karma: %d" % karma_collected
 
 
 func _visual_box(parent: Node3D, at: Vector3, size: Vector3, color: Color) -> void:
@@ -372,11 +387,11 @@ func _add_winter_atmosphere() -> void:
 	environment.background_color = Color(0.008, 0.012, 0.035)
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.38, 0.5, 0.78)
-	environment.ambient_light_energy = 0.38
+	environment.ambient_light_energy = 0.20
 	environment.ambient_light_sky_contribution = 0.0
 	environment.fog_enabled = true
-	environment.fog_light_color = Color(0.16, 0.22, 0.39)
-	environment.fog_density = 0.013
+	environment.fog_light_color = Color(0.46, 0.56, 0.68)
+	environment.fog_density = 0.045
 	world.environment = environment
 	add_child(world)
 	for at in [Vector3(-24, 1.8, -1.5), Vector3(4, 1.8, -8),
@@ -391,18 +406,20 @@ func _add_winter_atmosphere() -> void:
 	var flake := SphereMesh.new()
 	flake.radius = 0.035
 	flake.height = 0.07
+	flake.radial_segments = 6
+	flake.rings = 4
 	for origin in [Vector3(-14, 10, -2), Vector3(14, 10, -2)]:
 		var snow := CPUParticles3D.new()
 		snow.position = origin
-		snow.amount = 260
+		snow.amount = 480
 		snow.lifetime = 7.0
 		snow.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
 		snow.emission_box_extents = Vector3(19, 0.5, 17)
-		snow.direction = Vector3(0, -1, 0)
-		snow.spread = 12.0
-		snow.gravity = Vector3(0, -0.7, 0)
-		snow.initial_velocity_min = 0.4
-		snow.initial_velocity_max = 0.9
+		snow.direction = Vector3(0.8, -0.55, 0.2).normalized()
+		snow.spread = 18.0
+		snow.gravity = Vector3(1.1, -0.9, 0.2)
+		snow.initial_velocity_min = 2.4
+		snow.initial_velocity_max = 4.0
 		snow.mesh = flake
 		add_child(snow)
 
@@ -434,6 +451,7 @@ func _add_christmas_decorations() -> void:
 	]
 	for gift in gifts:
 		_add_present(gift[0], gift[1], gift[2])
+		karma_choices.add_interaction(gift[0])
 	_add_candy_cane(Vector3(-27, 0, -1.45))
 	_add_candy_cane(Vector3(4.35, 0, -4.1))
 	_add_candy_cane(Vector3(18.45, 0, 5.0))
@@ -518,14 +536,18 @@ func _add_light_string(start: Vector3, finish: Vector3) -> void:
 			var bulb := SphereMesh.new()
 			bulb.radius = 0.13
 			bulb.height = 0.26
-			_colored_mesh(self, bulb, bulb_at, colors[(index / 2) % colors.size()], true)
+			var visual := _colored_mesh(self, bulb, bulb_at,
+				colors[(index / 2) % colors.size()], true)
+			var lamp: OmniLight3D = null
 			if index % 6 == 0:
-				var lamp := OmniLight3D.new()
+				lamp = OmniLight3D.new()
 				lamp.position = bulb_at
 				lamp.light_color = colors[(index / 2) % colors.size()]
 				lamp.light_energy = 0.8
 				lamp.omni_range = 5.0
 				add_child(lamp)
+			christmas_bulbs.append({"material": visual.material_override,
+				"lamp": lamp, "on": true})
 	if OS.is_debug_build():
 		assert(_cable_point(pole_top_a, pole_top_b, 0.0).is_equal_approx(pole_top_a))
 		assert(_cable_point(pole_top_a, pole_top_b, 1.0).is_equal_approx(pole_top_b))
@@ -574,9 +596,35 @@ func _on_exit(body: Node3D) -> void:
 	get_tree().call_deferred("change_scene_to_file", "res://scenes/level_02.tscn")
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if not get_tree().paused:
+		_animate_christmas_lights(delta)
 	if not completed and player.global_position.y < -5.0:
-		player.respawn(SPAWN)
+		set_process(false)
+		get_tree().call_deferred("reload_current_scene")
+
+
+func _animate_christmas_lights(delta: float) -> void:
+	light_show_time += delta
+	var beat := floori(light_show_time * 2.0)
+	var section := fposmod(light_show_time, 12.0)
+	for index in range(christmas_bulbs.size()):
+		var lit := false
+		if section < 6.0:
+			lit = posmod(index - beat, 8) < 3
+		elif section < 10.0:
+			lit = index % 2 == beat % 2
+		else:
+			lit = beat % 2 == 0
+		var bulb := christmas_bulbs[index]
+		if bulb["on"] == lit:
+			continue
+		bulb["on"] = lit
+		var material := bulb["material"] as StandardMaterial3D
+		material.emission_energy_multiplier = 2.0 if lit else 0.0
+		var lamp := bulb["lamp"] as OmniLight3D
+		if lamp:
+			lamp.light_energy = 0.8 if lit else 0.0
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -616,7 +664,7 @@ func _make_hud() -> void:
 	add_child(hud)
 
 	dash_label = _label(hud, "DASH READY [SHIFT]", Vector2(20, 20))
-	karma_label = _label(hud, "Karma collected: 0", Vector2(20, 48))
+	karma_label = _label(hud, "Karma: 0", Vector2(20, 48))
 	story_label = _label(hud, "Story item: not found", Vector2(20, 76))
 	completion_label = _label(hud, "LEVEL 1 COMPLETE", Vector2(20, 112))
 	completion_label.hide()
@@ -634,6 +682,7 @@ func _make_hud() -> void:
 
 	_button(options, "Resume", _toggle_pause)
 	_button(options, "Settings", func() -> void: settings_box.show())
+	options.add_child(ADMIN_LEVEL_SELECT.new())
 	_button(options, "Return to Main Menu", _return_to_menu)
 
 	settings_box = VBoxContainer.new()
