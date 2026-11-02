@@ -9,6 +9,7 @@ const LEVEL_SCENES := [
 	"res://scenes/level_05.tscn",
 	"res://scenes/level_06.tscn",
 	"res://scenes/level_07.tscn",
+	"res://scenes/level_08.tscn",
 ]
 
 var section: VBoxContainer
