@@ -261,18 +261,16 @@ func _get_movement_input_vector() -> Vector2:
 		y -= 1.0
 	return Vector2(x, y).normalized()
 
-func _start_dash(desired_dir: Vector3, cam_forward: Vector3) -> void:
+func _start_dash(desired_dir: Vector3, _cam_forward: Vector3) -> void:
+	if desired_dir.length_squared() <= 0.01:
+		return
 	current_state = State.DASHING
 	dash_timer = dash_duration
 	dash_cooldown = dash_cooldown_max
 	emit_signal("dash_cooldown_changed", dash_cooldown, dash_cooldown_max, false)
 	emit_signal("state_changed", "DASHING")
 
-	# If no direction key is held, dash straight forward in camera view
-	if desired_dir.length_squared() > 0.01:
-		dash_direction = desired_dir.normalized()
-	else:
-		dash_direction = cam_forward.normalized()
+	dash_direction = desired_dir.normalized()
 
 	# Zero-G Snap: cancels vertical gravity drop completely
 	velocity = dash_direction * dash_speed
@@ -293,9 +291,13 @@ func _physics_dashing(delta: float) -> void:
 
 	# Check if dashing into a wall to trigger Wall Run!
 	var wall_hit := _check_wall_collision()
-	if wall_hit.hit and wall_run_unlocked:
-		_start_wall_run(wall_hit.normal)
-		return
+	if wall_hit.hit and wall_run_unlocked and is_on_wall() and not is_on_floor():
+		var normal: Vector3 = wall_hit.normal.normalized()
+		var wall_tangent := Vector3(-normal.z, 0.0, normal.x).normalized()
+		if dash_direction.dot(normal) < -0.01 \
+				and absf(dash_direction.dot(wall_tangent)) >= cos(PI * 0.25):
+			_start_wall_run(normal)
+			return
 
 	if dash_timer <= 0.0:
 		# Dash duration finished
