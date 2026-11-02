@@ -19,6 +19,7 @@ var karma_collected := 0
 var karma_choices
 var karma_bar
 var karma_points: Array[Vector3] = []
+var karma_paths: Array[Dictionary] = []
 var story_found := false
 var completed := false
 
@@ -267,6 +268,39 @@ func _add_karma_choices(positive_path: String, negative_path: String, points: Ar
 	karma_choices.choice_made.connect(_on_karma_choice)
 	for at in points:
 		karma_choices.add_interaction(at)
+
+
+func _add_karma_path(high: bool, from: Vector3, to: Vector3, width: float) -> void:
+	var body := StaticBody3D.new()
+	body.name = "HighKarmaPath" if high else "LowKarmaPath"
+	body.transform = Transform3D(Basis.looking_at(to - from, Vector3.UP),
+		(from + to) * 0.5 - Vector3(0, 0.2, 0))
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(width, 0.4, from.distance_to(to))
+	collision.shape = shape
+	collision.disabled = true
+	body.add_child(collision)
+	var visual := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = shape.size
+	visual.mesh = box
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.94, 0.82, 0.35) if high else Color(0.45, 0.06, 0.08)
+	material.emission_enabled = true
+	material.emission = material.albedo_color
+	visual.material_override = material
+	body.add_child(visual)
+	body.visible = false
+	add_child(body)
+	karma_paths.append({"high": high, "body": body, "collision": collision})
+
+
+func _update_karma_paths(karma: int) -> void:
+	for path in karma_paths:
+		var open: bool = karma >= 50 if path["high"] else karma <= -50
+		path["body"].visible = open
+		path["collision"].disabled = not open
 
 
 func _add_finish() -> void:

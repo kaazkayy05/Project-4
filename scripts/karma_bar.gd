@@ -55,6 +55,8 @@ func _process(delta: float) -> void:
 		applied_karma = target
 		level.player.dash_cooldown_max = 2.0 if target >= 50 else base_dash_cooldown
 		level.player.dash_speed = base_dash_speed * (1.5 if target <= -50 else 1.0)
+		if level.has_method("_update_karma_paths"):
+			level._update_karma_paths(int(target))
 	if shown != target:
 		shown = move_toward(shown, target, delta * 80.0)
 		_refresh_label()

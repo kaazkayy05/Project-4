@@ -30,6 +30,8 @@ func _ready() -> void:
 	_add_greybox()
 	_add_locker_room()
 	_add_karma_choices("", "", [Vector3(-9, 0, -5.5), Vector3(9, 0, -5.5)])
+	_add_karma_path(true, Vector3(-12, 0, -60), Vector3(-12, 3, -72), 4.0)
+	_add_karma_path(false, Vector3(12, 0, -60), Vector3(12, 3, -72), 4.0)
 	_add_stadium_atmosphere()
 	_add_stadium_details()
 	_add_voice_unlock()

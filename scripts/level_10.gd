@@ -19,6 +19,8 @@ func _ready() -> void:
 	player.wall_run_unlocked = true
 	_add_greybox()
 	_add_karma_choices("", "", karma_points)
+	_add_karma_path(true, Vector3(-3, 2, -26.5), Vector3(-3, 2, -47.5), 3.0)
+	_add_karma_path(false, Vector3(3, 2, -57.5), Vector3(3, 5, -66.5), 3.0)
 	_add_story_pickup()
 	_add_finish()
 	_make_hud()

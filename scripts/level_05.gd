@@ -5,6 +5,13 @@ const FUNERAL_GREYBOX: PackedScene = preload(
 )
 const FUNERAL_SPAWN := Vector3(0, 0.1, -5)
 const MAZE_WALL_EXTENSION := 3.0
+const HIGH_KARMA_WALLS := ["MAZE_DIVIDER_HORIZONTAL_0024",
+	"MAZE_DIVIDER_HORIZONTAL_0034", "MAZE_DIVIDER_HORIZONTAL_0038"]
+const LOW_KARMA_WALLS := ["MAZE_DIVIDER_HORIZONTAL_0022",
+	"MAZE_DIVIDER_HORIZONTAL_0027", "MAZE_DIVIDER_HORIZONTAL_0032",
+	"MAZE_DIVIDER_HORIZONTAL_0045"]
+
+var karma_walls: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -78,6 +85,23 @@ func _add_greybox() -> void:
 			Basis(), collision_center
 		)
 		geometry.add_child(collision)
+		if part_name in HIGH_KARMA_WALLS or part_name in LOW_KARMA_WALLS:
+			var high: bool = part_name in HIGH_KARMA_WALLS
+			var tint := StandardMaterial3D.new()
+			tint.albedo_color = Color(0.94, 0.82, 0.35) if high else Color(0.45, 0.06, 0.08)
+			var cap := world.get_node("Raised_" + part_name) as MeshInstance3D
+			visual.material_override = tint
+			cap.material_override = tint
+			karma_walls.append({"high": high, "visual": visual, "cap": cap, "collision": collision})
+
+
+func _update_karma_paths(karma: int) -> void:
+	super(karma)
+	for wall in karma_walls:
+		var open: bool = karma >= 50 if wall["high"] else karma <= -50
+		wall["visual"].visible = not open
+		wall["cap"].visible = not open
+		wall["collision"].disabled = open
 
 
 func _add_story_pickup() -> void:
