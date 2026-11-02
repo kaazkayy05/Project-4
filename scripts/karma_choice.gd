@@ -6,6 +6,8 @@ const REACH := 2.0
 const CHOICE_HEIGHT := 2.6
 const PICTURE_SIZE := 1.3
 const GLOW_COLOR := Color(0.94, 0.82, 0.35)
+const NOISE_REACH := 3.0
+const NOISE_COOLDOWN := 5.0
 
 var player: Player3D
 var entries: Array[Dictionary] = []
@@ -14,13 +16,15 @@ var negative_texture: Texture2D
 var prompt: Label
 var active_index := -1
 var open_index := -1
+var noise_timer := 0.0
 
 
 func setup(target: Player3D, positive_path: String, negative_path: String,
 		positive_region: Rect2, negative_region: Rect2) -> void:
 	player = target
-	positive_texture = _cropped_texture(positive_path, positive_region)
-	negative_texture = _cropped_texture(negative_path, negative_region)
+	positive_texture = _choice_texture(positive_path, positive_region, true)
+	negative_texture = _choice_texture(negative_path, negative_region, false)
+	player.jump_charge_changed.connect(_on_jump_charge)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var layer := CanvasLayer.new()
 	layer.layer = 10
@@ -61,6 +65,29 @@ func reset_interactions() -> void:
 	prompt.hide()
 
 
+func _choice_texture(path: String, region: Rect2, good: bool) -> Texture2D:
+	if path.is_empty():
+		var image := Image.create_empty(256, 256, false, Image.FORMAT_RGBA8)
+		image.fill(GLOW_COLOR if good else Color(0.45, 0.06, 0.08))
+		image.fill_rect(Rect2i(48, 112, 160, 32), Color.WHITE)
+		if good:
+			image.fill_rect(Rect2i(112, 48, 32, 160), Color.WHITE)
+		return ImageTexture.create_from_image(image)
+	if not region.has_area():
+		return load(path)
+	return _cropped_texture(path, region)
+
+
+func _on_jump_charge(_charge: float, is_charging: bool) -> void:
+	if not is_charging or noise_timer > 0.0:
+		return
+	for index in range(entries.size()):
+		if not entries[index]["used"] and _distance_squared(index) <= NOISE_REACH * NOISE_REACH:
+			noise_timer = NOISE_COOLDOWN
+			choice_made.emit(-10)
+			return
+
+
 func _cropped_texture(path: String, region: Rect2) -> Texture2D:
 	var atlas := AtlasTexture.new()
 	atlas.atlas = load(path)
@@ -93,10 +120,11 @@ func _distance_squared(index: int) -> float:
 	return difference.length_squared()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if get_tree().paused or not is_instance_valid(player):
 		prompt.hide()
 		return
+	noise_timer = maxf(0.0, noise_timer - delta)
 	if open_index >= 0 and _distance_squared(open_index) > REACH * REACH:
 		_close_choice()
 	active_index = -1

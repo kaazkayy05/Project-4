@@ -12,6 +12,9 @@ var level_start := 0
 var shown := 0.0
 var value_label: Label
 var track_texture: GradientTexture2D
+var base_dash_speed := 0.0
+var base_dash_cooldown := 0.0
+var applied_karma := INF
 
 
 func setup(target: Node) -> void:
@@ -35,6 +38,8 @@ func setup(target: Node) -> void:
 	value_label.size = Vector2(TRACK.size.x, 22)
 	add_child(value_label)
 	_refresh_label()
+	base_dash_speed = level.player.dash_speed
+	base_dash_cooldown = level.player.dash_cooldown_max
 
 
 func _process(delta: float) -> void:
@@ -46,6 +51,10 @@ func _process(delta: float) -> void:
 		if level.karma_label.text.begins_with("Karma: "):
 			level.karma_label.text = "Karma: %d" % level.karma_collected
 	var target := float(level.karma_collected)
+	if applied_karma != target:
+		applied_karma = target
+		level.player.dash_cooldown_max = 2.0 if target >= 50 else base_dash_cooldown
+		level.player.dash_speed = base_dash_speed * (1.5 if target <= -50 else 1.0)
 	if shown != target:
 		shown = move_toward(shown, target, delta * 80.0)
 		_refresh_label()

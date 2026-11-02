@@ -19,6 +19,7 @@ const BLOCKING_PARTS := [
 var voice_unlocked := false
 var story_count := 0
 var voice_label: Label
+var football_found := 0
 
 
 func _ready() -> void:
@@ -28,6 +29,7 @@ func _ready() -> void:
 	player.wall_run_unlocked = false
 	_add_greybox()
 	_add_locker_room()
+	_add_karma_choices("", "", [Vector3(-9, 0, -5.5), Vector3(9, 0, -5.5)])
 	_add_stadium_atmosphere()
 	_add_stadium_details()
 	_add_voice_unlock()
@@ -284,7 +286,12 @@ func _collect_memory(body: Node3D, area: Area3D, is_story: bool) -> void:
 		story_label.text = "Stands memories: %d / 2" % story_count
 	else:
 		karma_collected += 1
-		karma_label.text = "Football karma: %d / 3" % (karma_collected - karma_bar.level_start)
+		football_found += 1
+		karma_label.text = "Football karma: %d / 3" % football_found
+
+
+func _on_karma_choice(amount: int) -> void:
+	karma_collected += amount
 
 
 func _add_finish_stairs() -> void:
@@ -331,7 +338,7 @@ func _on_finish(body: Node3D) -> void:
 		return
 	completed = true
 	player.set_physics_process(false)
-	completion_label.text = "LEVEL 4 COMPLETE | FOOTBALL KARMA %d / 3" % (karma_collected - karma_bar.level_start)
+	completion_label.text = "LEVEL 4 COMPLETE | FOOTBALL KARMA %d / 3" % football_found
 	completion_label.show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	get_tree().call_deferred("change_scene_to_file", "res://scenes/level_05.tscn")

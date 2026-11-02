@@ -18,6 +18,7 @@ func _ready() -> void:
 	player.scream_jump_unlocked = true
 	player.wall_run_unlocked = true
 	_add_greybox()
+	_add_karma_choices("", "", karma_points)
 	_add_story_pickup()
 	_add_finish()
 	_make_hud()
@@ -42,6 +43,8 @@ func _add_greybox() -> void:
 			continue
 		var visual := part as MeshInstance3D
 		var part_name := String(visual.name)
+		if part_name.begins_with("KARMA_PICKUP"):
+			karma_points.append(visual.global_transform * visual.mesh.get_aabb().get_center())
 		if part_name.begins_with("KARMA_PICKUP") \
 				or part_name.begins_with("STORY_ITEM_PICKUP") \
 				or part_name.begins_with("PLAYER_SPAWN") \

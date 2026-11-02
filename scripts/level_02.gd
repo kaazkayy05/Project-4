@@ -18,6 +18,7 @@ var sensitivity_slider: HSlider
 var karma_collected := 0
 var karma_choices
 var karma_bar
+var karma_points: Array[Vector3] = []
 var story_found := false
 var completed := false
 
@@ -257,6 +258,15 @@ func _collect(body: Node3D, area: Area3D, is_story: bool) -> void:
 func _on_karma_choice(amount: int) -> void:
 	karma_collected += amount
 	karma_label.text = "Karma: %d" % karma_collected
+
+
+func _add_karma_choices(positive_path: String, negative_path: String, points: Array) -> void:
+	karma_choices = KARMA_CHOICE.new()
+	add_child(karma_choices)
+	karma_choices.setup(player, positive_path, negative_path, Rect2(), Rect2())
+	karma_choices.choice_made.connect(_on_karma_choice)
+	for at in points:
+		karma_choices.add_interaction(at)
 
 
 func _add_finish() -> void:
