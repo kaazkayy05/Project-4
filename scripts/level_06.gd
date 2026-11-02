@@ -141,6 +141,7 @@ func _on_finish(body: Node3D) -> void:
 	player.set_physics_process(false)
 	completion_label.show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	get_tree().call_deferred("change_scene_to_file", "res://scenes/level_07.tscn")
 
 
 func _process(_delta: float) -> void:
