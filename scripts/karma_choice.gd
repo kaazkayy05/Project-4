@@ -50,6 +50,13 @@ func add_interaction(at: Vector3) -> void:
 	entries.append({"position": at, "used": false})
 
 
+func reset_interactions() -> void:
+	for entry in entries:
+		entry["used"] = false
+	active_index = -1
+	prompt.hide()
+
+
 func _cropped_texture(path: String, region: Rect2) -> Texture2D:
 	var atlas := AtlasTexture.new()
 	atlas.atlas = load(path)
