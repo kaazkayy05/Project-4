@@ -67,6 +67,7 @@ func _ready() -> void:
 	completion_label.position.y = 142
 	upgrade_label = _label(dash_label.get_parent(), "DASH DISTANCE +50%", Vector2(20, 105))
 	upgrade_label.hide()
+	_on_karma_choice(0)
 	player.dash_cooldown_changed.connect(_on_dash_changed)
 	_on_dash_changed(0.0, player.dash_cooldown_max, true)
 	if OS.is_debug_build():

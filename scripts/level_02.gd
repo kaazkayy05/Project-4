@@ -4,6 +4,7 @@ const SPAWN := Vector3(0, 0.1, 4)
 const SETTINGS_PATH := "user://settings.cfg"
 const ADMIN_LEVEL_SELECT = preload("res://scripts/admin_level_select.gd")
 const KARMA_CHOICE = preload("res://scripts/karma_choice.gd")
+const KARMA_BAR = preload("res://scripts/karma_bar.gd")
 
 @onready var player: Player3D = $Player3D
 
@@ -16,6 +17,7 @@ var settings_box: VBoxContainer
 var sensitivity_slider: HSlider
 var karma_collected := 0
 var karma_choices
+var karma_bar
 var story_found := false
 var completed := false
 
@@ -317,6 +319,10 @@ func _make_hud() -> void:
 	story_label = _label(hud, "Story item: not found", Vector2(20, 76))
 	completion_label = _label(hud, "LEVEL 2 COMPLETE", Vector2(20, 112))
 	completion_label.hide()
+	karma_bar = KARMA_BAR.new()
+	hud.add_child(karma_bar)
+	karma_bar.setup(self)
+	karma_label.text = "Karma: %d" % karma_collected
 	pause_menu = CenterContainer.new()
 	pause_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pause_menu.hide()

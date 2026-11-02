@@ -284,7 +284,7 @@ func _collect_memory(body: Node3D, area: Area3D, is_story: bool) -> void:
 		story_label.text = "Stands memories: %d / 2" % story_count
 	else:
 		karma_collected += 1
-		karma_label.text = "Football karma: %d / 3" % karma_collected
+		karma_label.text = "Football karma: %d / 3" % (karma_collected - karma_bar.level_start)
 
 
 func _add_finish_stairs() -> void:
@@ -331,7 +331,7 @@ func _on_finish(body: Node3D) -> void:
 		return
 	completed = true
 	player.set_physics_process(false)
-	completion_label.text = "LEVEL 4 COMPLETE | FOOTBALL KARMA %d / 3" % karma_collected
+	completion_label.text = "LEVEL 4 COMPLETE | FOOTBALL KARMA %d / 3" % (karma_collected - karma_bar.level_start)
 	completion_label.show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	get_tree().call_deferred("change_scene_to_file", "res://scenes/level_05.tscn")
