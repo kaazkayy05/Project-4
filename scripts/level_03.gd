@@ -141,7 +141,7 @@ func _add_atmosphere() -> void:
 	environment.background_color = Color(0.016, 0.009, 0.035)
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.4, 0.32, 0.58)
-	environment.ambient_light_energy = 0.4
+	environment.ambient_light_energy = 0.18
 	environment.ambient_light_sky_contribution = 0.0
 	environment.fog_enabled = true
 	environment.fog_light_color = Color(0.2, 0.1, 0.28)

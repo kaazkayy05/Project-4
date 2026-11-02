@@ -23,6 +23,8 @@ var settings_box: VBoxContainer
 var sensitivity_slider: HSlider
 var karma_collected := 0
 var karma_choices
+var christmas_bulbs: Array[Dictionary] = []
+var light_show_time := 0.0
 var story_found := false
 var completed := false
 
@@ -385,7 +387,7 @@ func _add_winter_atmosphere() -> void:
 	environment.background_color = Color(0.008, 0.012, 0.035)
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.38, 0.5, 0.78)
-	environment.ambient_light_energy = 0.38
+	environment.ambient_light_energy = 0.20
 	environment.ambient_light_sky_contribution = 0.0
 	environment.fog_enabled = true
 	environment.fog_light_color = Color(0.16, 0.22, 0.39)
@@ -532,14 +534,18 @@ func _add_light_string(start: Vector3, finish: Vector3) -> void:
 			var bulb := SphereMesh.new()
 			bulb.radius = 0.13
 			bulb.height = 0.26
-			_colored_mesh(self, bulb, bulb_at, colors[(index / 2) % colors.size()], true)
+			var visual := _colored_mesh(self, bulb, bulb_at,
+				colors[(index / 2) % colors.size()], true)
+			var lamp: OmniLight3D = null
 			if index % 6 == 0:
-				var lamp := OmniLight3D.new()
+				lamp = OmniLight3D.new()
 				lamp.position = bulb_at
 				lamp.light_color = colors[(index / 2) % colors.size()]
 				lamp.light_energy = 0.8
 				lamp.omni_range = 5.0
 				add_child(lamp)
+			christmas_bulbs.append({"material": visual.material_override,
+				"lamp": lamp, "on": true})
 	if OS.is_debug_build():
 		assert(_cable_point(pole_top_a, pole_top_b, 0.0).is_equal_approx(pole_top_a))
 		assert(_cable_point(pole_top_a, pole_top_b, 1.0).is_equal_approx(pole_top_b))
@@ -588,10 +594,35 @@ func _on_exit(body: Node3D) -> void:
 	get_tree().call_deferred("change_scene_to_file", "res://scenes/level_02.tscn")
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if not get_tree().paused:
+		_animate_christmas_lights(delta)
 	if not completed and player.global_position.y < -5.0:
 		set_process(false)
 		get_tree().call_deferred("reload_current_scene")
+
+
+func _animate_christmas_lights(delta: float) -> void:
+	light_show_time += delta
+	var beat := floori(light_show_time * 2.0)
+	var section := fposmod(light_show_time, 12.0)
+	for index in range(christmas_bulbs.size()):
+		var lit := false
+		if section < 6.0:
+			lit = posmod(index - beat, 8) < 3
+		elif section < 10.0:
+			lit = index % 2 == beat % 2
+		else:
+			lit = beat % 2 == 0
+		var bulb := christmas_bulbs[index]
+		if bulb["on"] == lit:
+			continue
+		bulb["on"] = lit
+		var material := bulb["material"] as StandardMaterial3D
+		material.emission_energy_multiplier = 2.0 if lit else 0.0
+		var lamp := bulb["lamp"] as OmniLight3D
+		if lamp:
+			lamp.light_energy = 0.8 if lit else 0.0
 
 
 func _unhandled_input(event: InputEvent) -> void:
