@@ -390,8 +390,8 @@ func _add_winter_atmosphere() -> void:
 	environment.ambient_light_energy = 0.20
 	environment.ambient_light_sky_contribution = 0.0
 	environment.fog_enabled = true
-	environment.fog_light_color = Color(0.16, 0.22, 0.39)
-	environment.fog_density = 0.013
+	environment.fog_light_color = Color(0.46, 0.56, 0.68)
+	environment.fog_density = 0.045
 	world.environment = environment
 	add_child(world)
 	for at in [Vector3(-24, 1.8, -1.5), Vector3(4, 1.8, -8),
@@ -409,15 +409,15 @@ func _add_winter_atmosphere() -> void:
 	for origin in [Vector3(-14, 10, -2), Vector3(14, 10, -2)]:
 		var snow := CPUParticles3D.new()
 		snow.position = origin
-		snow.amount = 260
+		snow.amount = 480
 		snow.lifetime = 7.0
 		snow.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
 		snow.emission_box_extents = Vector3(19, 0.5, 17)
-		snow.direction = Vector3(0, -1, 0)
-		snow.spread = 12.0
-		snow.gravity = Vector3(0, -0.7, 0)
-		snow.initial_velocity_min = 0.4
-		snow.initial_velocity_max = 0.9
+		snow.direction = Vector3(0.8, -0.55, 0.2).normalized()
+		snow.spread = 18.0
+		snow.gravity = Vector3(1.1, -0.9, 0.2)
+		snow.initial_velocity_min = 2.4
+		snow.initial_velocity_max = 4.0
 		snow.mesh = flake
 		add_child(snow)
 

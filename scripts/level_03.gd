@@ -145,7 +145,7 @@ func _add_atmosphere() -> void:
 	environment.ambient_light_sky_contribution = 0.0
 	environment.fog_enabled = true
 	environment.fog_light_color = Color(0.2, 0.1, 0.28)
-	environment.fog_density = 0.012
+	environment.fog_density = 0.060
 	world.environment = environment
 	add_child(world)
 	for at in [Vector3(-20, 3, 0), Vector3(-10, 3, -14),
