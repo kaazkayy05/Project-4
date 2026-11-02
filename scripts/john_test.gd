@@ -10,8 +10,8 @@ const Player3D = preload("res://scripts/player_3d.gd")
 
 # UI References
 @onready var hud: CanvasLayer = $HUD
-@onready var back_button: Button = $HUD/TopBar/BackButton
-@onready var mouse_hint_label: Label = $HUD/TopBar/MouseHintLabel
+@onready var back_button: Button = get_node_or_null("HUD/TopBar/BackButton")
+@onready var mouse_hint_label: Label = get_node_or_null("HUD/TopBar/MouseHintLabel")
 @onready var timer_label: Label = get_node_or_null("HUD/TopBar/TimerLabel")
 @onready var state_label: Label = $HUD/BottomPanel/Margin/HBox/StateBox/StateLabel
 @onready var dash_bar: ProgressBar = $HUD/BottomPanel/Margin/HBox/DashBox/DashBar
@@ -156,7 +156,7 @@ func _on_dash_cooldown_changed(current: float, maximum: float, is_ready: bool) -
 			dash_label.text = "DASH: READY [SHIFT]"
 			dash_label.modulate = Color(0.3, 1.0, 0.4)
 		else:
-			dash_label.text = "DASH REFRESH (touch floor): %.1fs" % current
+			dash_label.text = "DASH REFRESH: %.1fs" % current
 			dash_label.modulate = Color(1.0, 0.7, 0.2)
 
 func _on_jump_charge_changed(charge_percent: float, is_charging: bool) -> void:

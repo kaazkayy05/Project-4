@@ -391,7 +391,7 @@ text = "[W][A][S][D] - 8-Way Movement"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
 theme_override_font_sizes/font_size = 13
-text = "[SHIFT] - Zero-G Dash (3s floor CD)"
+text = "[SHIFT] - Zero-G Dash (3s CD)"
 
 [node name="WallRunLabel" type="Label" parent="HUD/ControlsCard/Margin/VBox"]
 layout_mode = 2
