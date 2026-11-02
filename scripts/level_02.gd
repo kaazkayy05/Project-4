@@ -2,6 +2,7 @@ extends Node3D
 
 const SPAWN := Vector3(0, 0.1, 4)
 const SETTINGS_PATH := "user://settings.cfg"
+const ADMIN_LEVEL_SELECT = preload("res://scripts/admin_level_select.gd")
 
 @onready var player: Player3D = $Player3D
 
@@ -313,6 +314,7 @@ func _make_hud() -> void:
 	panel.add_child(options)
 	_button(options, "Resume", _toggle_pause)
 	_button(options, "Settings", func() -> void: settings_box.show())
+	options.add_child(ADMIN_LEVEL_SELECT.new())
 	_button(options, "Return to Main Menu", _return_to_menu)
 	settings_box = VBoxContainer.new()
 	settings_box.hide()

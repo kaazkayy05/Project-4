@@ -2,6 +2,7 @@ extends Node3D
 
 const SPAWN := Vector3(-27, 0.1, 0)
 const SETTINGS_PATH := "user://settings.cfg"
+const ADMIN_LEVEL_SELECT = preload("res://scripts/admin_level_select.gd")
 const TREE_TIERS := [
 	Vector3(3.5, 4.2, 5.2),
 	Vector3(5.6, 3.5, 4.8),
@@ -634,6 +635,7 @@ func _make_hud() -> void:
 
 	_button(options, "Resume", _toggle_pause)
 	_button(options, "Settings", func() -> void: settings_box.show())
+	options.add_child(ADMIN_LEVEL_SELECT.new())
 	_button(options, "Return to Main Menu", _return_to_menu)
 
 	settings_box = VBoxContainer.new()
