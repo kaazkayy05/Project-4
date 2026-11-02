@@ -72,6 +72,7 @@ var buffered_jump_velocity: float = 0.0
 
 var mat_body: StandardMaterial3D
 var mat_visor: StandardMaterial3D
+var ghost_materials: Array[Dictionary] = []
 
 func _init() -> void:
 	_setup_inputs()
@@ -79,6 +80,7 @@ func _init() -> void:
 func _ready() -> void:
 	_setup_inputs()
 	_setup_materials()
+	_apply_level_character()
 	dash_cooldown = 0.0
 	emit_signal("dash_cooldown_changed", dash_cooldown, dash_cooldown_max, true)
 	emit_signal("jump_charge_changed", 0.0, false)
@@ -118,6 +120,67 @@ func _setup_materials() -> void:
 		mat_visor.emission = Color(0.3, 0.8, 1.0)
 		mat_visor.emission_energy_multiplier = 1.2
 		mesh_visor.material_override = mat_visor
+
+
+func _apply_level_character() -> void:
+	var level_name := String(get_parent().name)
+	if not level_name.begins_with("Level"):
+		return
+	var level_suffix := level_name.substr(5)
+	if not level_suffix.is_valid_int():
+		return
+	var level_number := level_suffix.to_int()
+	var age := "kid"
+	var target_height := 1.55
+	if level_number > 10:
+		age = "adult"
+		target_height = 1.8
+	elif level_number > 3:
+		age = "teen"
+		target_height = 1.7
+	var scene := load("res://Models/charcter/%s.glb" % age) as PackedScene
+	if scene == null:
+		return
+	var imported := scene.instantiate()
+	var character := imported.find_child("%s_Ghost_ROOT" % age.capitalize(),
+		true, false) as Node3D
+	if character == null:
+		imported.free()
+		push_warning("Character model root missing for %s" % age)
+		return
+	var bottom := INF
+	var top := -INF
+	for part in character.get_children():
+		var mesh_part := part as MeshInstance3D
+		if mesh_part == null or mesh_part.mesh == null:
+			continue
+		var bounds := mesh_part.mesh.get_aabb()
+		bottom = minf(bottom, mesh_part.position.y + bounds.position.y)
+		top = maxf(top, mesh_part.position.y + bounds.end.y)
+		for surface in range(mesh_part.mesh.get_surface_count()):
+			var original := mesh_part.get_active_material(surface) as StandardMaterial3D
+			if original == null:
+				continue
+			var copy := original.duplicate() as StandardMaterial3D
+			mesh_part.set_surface_override_material(surface, copy)
+			ghost_materials.append({"material": copy, "emission": copy.emission,
+				"energy": copy.emission_energy_multiplier})
+		part.owner = null
+	if top <= bottom:
+		imported.free()
+		ghost_materials.clear()
+		push_warning("Character model has no meshes for %s" % age)
+		return
+	var model_scale := target_height / (top - bottom)
+	character.owner = null
+	imported.remove_child(character)
+	var visuals := $Visuals as Node3D
+	visuals.add_child(character)
+	character.scale = Vector3.ONE * model_scale
+	character.position = Vector3(0, -bottom * model_scale, 0)
+	imported.free()
+	mesh_body.hide()
+	mesh_visor.hide()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -441,6 +504,16 @@ func _update_visual_feedback() -> void:
 				mat_body.emission_energy_multiplier = 0.6
 				mat_visor.emission = Color(0.3, 0.8, 1.0)
 				mat_visor.emission_energy_multiplier = 1.2
+	_update_ghost_feedback()
+
+
+func _update_ghost_feedback() -> void:
+	var active := current_state != State.NORMAL or is_charging_jump
+	for entry in ghost_materials:
+		var material := entry["material"] as StandardMaterial3D
+		material.emission = mat_body.emission if active else entry["emission"]
+		material.emission_energy_multiplier = (
+			mat_body.emission_energy_multiplier if active else entry["energy"])
 
 func respawn(spawn_pos: Vector3) -> void:
 	global_position = spawn_pos
