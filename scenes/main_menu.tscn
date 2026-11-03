@@ -29,7 +29,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Menu" type="VBoxContainer" parent="Center" unique_id=1406637936]
-custom_minimum_size = Vector2(320, 0)
+custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 theme_override_constants/separation = 12
 
@@ -38,3 +38,111 @@ custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "Start"
+
+[node name="Settings" type="Button" parent="Center/Menu" unique_id=2086058582]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Settings"
+
+[node name="SettingsPanel" type="PanelContainer" parent="Center" unique_id=194820101]
+visible = false
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/SettingsPanel" unique_id=194820108]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="Center/SettingsPanel/Margin" unique_id=194820109]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820110]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.97, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "Settings"
+horizontal_alignment = 1
+
+[node name="DeviceLabel" type="Label" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820112]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.98, 1)
+theme_override_font_sizes/font_size = 14
+text = "Microphone Device:"
+
+[node name="DeviceOption" type="OptionButton" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820113]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+
+[node name="DeviceWarning" type="Label" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820116]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.35, 1)
+theme_override_font_sizes/font_size = 10
+text = "Note: If using laptop Microphone Array, set Windows format to 2-channel in mmsys.cpl to prevent WASAPI freeze."
+autowrap_mode = 2
+
+[node name="SensitivityLabel" type="Label" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820102]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.98, 1)
+theme_override_font_sizes/font_size = 14
+text = "Microphone Sensitivity: 50%"
+horizontal_alignment = 1
+
+[node name="SensitivitySlider" type="HSlider" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820103]
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+min_value = 0.0
+max_value = 100.0
+step = 1.0
+value = 50.0
+
+[node name="LiveMeterLabel" type="Label" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820114]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.82, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Live Mic Test: -60 dBFS (Quiet)"
+
+[node name="LiveMeterBar" type="ProgressBar" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820115]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+min_value = -60.0
+max_value = 0.0
+value = -60.0
+show_percentage = false
+
+[node name="RecalibrateButton" type="Button" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820104]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Recalibrate Microphone"
+
+[node name="CalibrationStatus" type="Label" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820105]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.85, 0.6, 1)
+theme_override_font_sizes/font_size = 12
+text = ""
+horizontal_alignment = 1
+
+[node name="ExplanationText" type="Label" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820107]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.78, 0.88, 1)
+theme_override_font_sizes/font_size = 11
+text = "WHAT SETTINGS & SOUND DO:
+• Sensitivity: Adjusts microphone gain. Higher sensitivity detects quieter speech; lower sensitivity requires louder sound.
+• Recalibrate: Automatically measures background room noise and tunes sensitivity so ambient room hum won't trigger jumps.
+• Yapping: Speak into your mic to walk upright.
+• Silence (5s on ground): Puts you into a crouchwalk.
+• Scream Jump: Shout to jump (unlocked in Level 4 with live dBFS meter). Requires 0.1s quiet between jumps.
+• Karma Warning: Screaming within 3m of an interactable costs 10 Karma!"
+autowrap_mode = 2
+
+[node name="BackButton" type="Button" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820111]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Back"

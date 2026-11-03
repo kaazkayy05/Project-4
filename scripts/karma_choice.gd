@@ -17,6 +17,9 @@ var player_was_processing := false
 func setup(target: Player3D, positive_path: String, negative_path: String,
 		positive_region: Rect2, negative_region: Rect2) -> void:
 	player = target
+	for entry in entries:
+		if is_instance_valid(player) and player.has_method("register_interactable_position"):
+			player.register_interactable_position(entry["position"])
 	positive_texture = _cropped_texture(positive_path, positive_region)
 	negative_texture = _cropped_texture(negative_path, negative_region)
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -48,6 +51,8 @@ func setup(target: Player3D, positive_path: String, negative_path: String,
 
 func add_interaction(at: Vector3) -> void:
 	entries.append({"position": at, "used": false})
+	if is_instance_valid(player) and player.has_method("register_interactable_position"):
+		player.register_interactable_position(at)
 
 
 func reset_interactions() -> void:
