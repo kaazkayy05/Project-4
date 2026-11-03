@@ -115,6 +115,20 @@ const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"e
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
+function requestBrowserMicPermission() {
+	if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+		navigator.mediaDevices.getUserMedia({ audio: true })
+			.then(function(stream) {
+				console.log('Browser microphone permission granted.');
+			})
+			.catch(function(err) {
+				console.warn('Browser microphone permission error or dismissed:', err);
+			});
+	}
+}
+window.addEventListener('click', requestBrowserMicPermission, { once: true });
+window.addEventListener('touchstart', requestBrowserMicPermission, { once: true });
+
 (function () {
 	const statusOverlay = document.getElementById('status');
 	const statusProgress = document.getElementById('status-progress');
