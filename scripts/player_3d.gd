@@ -178,6 +178,7 @@ func _setup_microphone() -> void:
 		mic_player.name = "MicrophonePlayer"
 		mic_player.stream = AudioStreamMicrophone.new()
 		mic_player.bus = "MicrophoneCapture"
+		mic_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 		add_child(mic_player)
 		mic_player.play()
 	else:
@@ -189,11 +190,14 @@ func _create_volume_meter_ui() -> void:
 	add_child(hud)
 
 	volume_meter_container = VBoxContainer.new()
-	volume_meter_container.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	volume_meter_container.position = Vector2(20, -180)
 	volume_meter_container.custom_minimum_size = Vector2(36, 160)
 	volume_meter_container.visible = scream_jump_unlocked
 	hud.add_child(volume_meter_container)
+	volume_meter_container.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	volume_meter_container.offset_left = 20
+	volume_meter_container.offset_top = -180
+	volume_meter_container.offset_right = 80
+	volume_meter_container.offset_bottom = -20
 
 	volume_meter_bar = ProgressBar.new()
 	volume_meter_bar.fill_mode = ProgressBar.FILL_BOTTOM_TO_TOP

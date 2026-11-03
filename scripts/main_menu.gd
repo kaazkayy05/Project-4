@@ -126,6 +126,7 @@ func _setup_mic_capture() -> void:
 	mic_player = AudioStreamPlayer.new()
 	mic_player.stream = AudioStreamMicrophone.new()
 	mic_player.bus = "MicrophoneCapture"
+	mic_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(mic_player)
 	mic_player.play()
 
