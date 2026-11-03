@@ -22,6 +22,9 @@ var noise_timer := 0.0
 func setup(target: Player3D, positive_path: String, negative_path: String,
 		positive_region: Rect2, negative_region: Rect2) -> void:
 	player = target
+	for entry in entries:
+		if is_instance_valid(player) and player.has_method("register_interactable_position"):
+			player.register_interactable_position(entry["position"])
 	positive_texture = _choice_texture(positive_path, positive_region, true)
 	negative_texture = _choice_texture(negative_path, negative_region, false)
 	player.jump_charge_changed.connect(_on_jump_charge)
@@ -54,6 +57,8 @@ func add_interaction(at: Vector3) -> void:
 	_add_option(choice, positive_texture, "1", -0.75)
 	_add_option(choice, negative_texture, "2", 0.75)
 	entries.append({"position": at, "used": false, "glow": glow, "choice": choice})
+	if is_instance_valid(player) and player.has_method("register_interactable_position"):
+		player.register_interactable_position(at)
 
 
 func reset_interactions() -> void:

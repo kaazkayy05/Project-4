@@ -73,6 +73,7 @@ func _ready() -> void:
 
 	_make_hud()
 	player.dash_cooldown_changed.connect(_on_dash_changed)
+	player.karma_penalty_applied.connect(_on_karma_penalty)
 	_on_dash_changed(0.0, player.dash_cooldown_max, true)
 	_wake()
 
@@ -200,6 +201,16 @@ func _collect(body: Node3D, area: Area3D, is_story: bool) -> void:
 func _on_karma_choice(amount: int) -> void:
 	karma_collected += amount
 	karma_label.text = "Karma: %d" % karma_collected
+
+
+func _on_karma_penalty(amount: int) -> void:
+	karma_collected -= amount
+	karma_label.text = "Karma: %d" % karma_collected
+	completion_label.text = "LOUD NOISE NEAR OBJECT! -%d KARMA" % amount
+	completion_label.show()
+	var t := create_tween()
+	t.tween_interval(2.0)
+	t.tween_callback(func() -> void: if not completed: completion_label.hide())
 
 
 func _visual_box(parent: Node3D, at: Vector3, size: Vector3, color: Color) -> void:
@@ -718,8 +729,22 @@ func _make_hud() -> void:
 	settings_box.add_child(sensitivity_slider)
 	var config := ConfigFile.new()
 	if config.load(SETTINGS_PATH) == OK:
-		sensitivity_slider.set_value_no_signal(config.get_value("audio", "microphone_sensitivity", 50))
+		var sens_val: float = float(config.get_value("audio", "microphone_sensitivity", 50))
+		if sens_val < 25.0:
+			sens_val = 50.0
+		sensitivity_slider.set_value_no_signal(sens_val)
 	sensitivity_slider.value_changed.connect(_save_sensitivity)
+	_button(settings_box, "Recalibrate Microphone", func() -> void:
+		sensitivity_slider.value = 50.0
+		_save_sensitivity(50.0)
+	)
+	var info := Label.new()
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.custom_minimum_size = Vector2(300, 0)
+	info.text = "SETTINGS INFO:\n• Sensitivity: Adjusts microphone pickup gain.\n• Recalibrate: Resets sensitivity to optimal baseline for room noise.\n• Yapping: Speak continuously to walk.\n• Silence: 5s quiet on ground puts you in crouchwalk.\n• Scream Jump: Unlocks at Level 4 (reveals dBFS meter).\n• 3m Warning: Screaming near interactables loses 10 Karma!"
+	info.add_theme_font_size_override("font_size", 11)
+	info.add_theme_color_override("font_color", Color(0.75, 0.82, 0.9))
+	settings_box.add_child(info)
 	_button(settings_box, "Back", func() -> void: settings_box.hide())
 
 

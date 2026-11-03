@@ -4,6 +4,9 @@ class_name Player3D
 signal dash_cooldown_changed(current: float, maximum: float, is_ready: bool)
 signal jump_charge_changed(charge_percent: float, is_charging: bool)
 signal state_changed(new_state_name: String)
+signal crouching_changed(is_crouching: bool)
+signal yapping_changed(is_yapping: bool)
+signal karma_penalty_applied(amount: int)
 
 enum State {
 	NORMAL,
@@ -13,6 +16,7 @@ enum State {
 
 # --- Movement Parameters ---
 @export var walk_speed: float = 8.5
+@export var crouch_speed: float = 4.0
 @export var acceleration: float = 40.0
 @export var friction: float = 30.0
 @export var air_acceleration: float = 20.0
@@ -31,7 +35,7 @@ enum State {
 @export var wall_jump_away_force: float = 11.0
 @export var wall_jump_up_force: float = 10.0
 
-# --- Jump Parameters (Microphone Placeholder: Hold to Charge) ---
+# --- Jump & Sound Parameters ---
 @export var min_jump_velocity: float = 7.5
 @export var max_jump_velocity: float = 16.0
 @export var jump_charge_rate: float = 1.8 # Reaches full charge in ~0.55s
@@ -39,9 +43,15 @@ enum State {
 @export var jump_buffer_duration: float = 0.15
 @export var scream_jump_unlocked: bool = true
 @export var wall_run_unlocked: bool = true
+@export var microphone_sensitivity: float = 50.0
+@export var yap_volume_threshold: float = 0.035
+@export var scream_volume_threshold: float = 0.22
+@export var quiet_time_to_crouch: float = 5.0
 
 # --- Camera Sensitivity ---
 @export var mouse_sensitivity: float = 0.0028
+
+const SETTINGS_PATH := "user://settings.cfg"
 
 # State Variables
 var current_state: State = State.NORMAL
@@ -58,6 +68,24 @@ var jump_charge: float = 0.0 # 0.0 to 1.0
 var coyote_timer: float = 0.0
 var jump_buffer_timer: float = 0.0
 var buffered_jump_velocity: float = 0.0
+
+var is_crouching: bool = false
+var is_yapping: bool = false
+var quiet_timer: float = 0.0
+var yap_timer: float = 0.0
+var scream_jump_armed: bool = true
+var scream_silence_timer: float = 0.0
+var karma_penalty_cooldown: float = 0.0
+var interactable_positions: Array[Vector3] = []
+var simulated_mic_volume: float = 0.0
+var current_raw_volume: float = 0.0
+var mic_capture: AudioEffectCapture
+var mic_player: AudioStreamPlayer
+var mic_bus_index: int = -1
+
+var volume_meter_container: VBoxContainer
+var volume_meter_bar: ProgressBar
+var volume_meter_label: Label
 
 # Node References
 @onready var camera_pivot: Node3D = $CameraPivot
@@ -82,6 +110,9 @@ func _ready() -> void:
 	_setup_inputs()
 	_setup_materials()
 	_apply_level_character()
+	load_microphone_settings()
+	_setup_microphone()
+	_create_volume_meter_ui()
 	skip_next_mouse_motion = OS.has_feature("web")
 	dash_cooldown = 0.0
 	emit_signal("dash_cooldown_changed", dash_cooldown, dash_cooldown_max, true)
@@ -96,7 +127,121 @@ func _setup_inputs() -> void:
 	_add_key_if_missing("move_right", KEY_D)
 	_add_key_if_missing("dash", KEY_SHIFT)
 	_add_key_if_missing("jump", KEY_SPACE)
+	_add_key_if_missing("yap", KEY_Y)
 	_add_key_if_missing("toggle_mouse", KEY_TAB)
+
+func load_microphone_settings() -> void:
+	var config := ConfigFile.new()
+	if config.load(SETTINGS_PATH) == OK:
+		microphone_sensitivity = float(config.get_value("audio", "microphone_sensitivity", microphone_sensitivity))
+		if microphone_sensitivity < 25.0:
+			microphone_sensitivity = 50.0
+		var saved_dev: String = config.get_value("audio", "microphone_device", "Default")
+		if saved_dev in AudioServer.get_input_device_list():
+			AudioServer.input_device = saved_dev
+
+func register_interactable_position(pos: Vector3) -> void:
+	if not pos in interactable_positions:
+		interactable_positions.append(pos)
+
+func unregister_interactable_position(pos: Vector3) -> void:
+	interactable_positions.erase(pos)
+
+func _exit_tree() -> void:
+	if mic_player:
+		mic_player.stop()
+
+func _setup_microphone() -> void:
+	mic_bus_index = AudioServer.get_bus_index("MicrophoneCapture")
+	if mic_bus_index == -1:
+		AudioServer.add_bus()
+		mic_bus_index = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(mic_bus_index, "MicrophoneCapture")
+		AudioServer.set_bus_volume_db(mic_bus_index, 0.0)
+		AudioServer.set_bus_mute(mic_bus_index, true)
+		mic_capture = AudioEffectCapture.new()
+		AudioServer.add_bus_effect(mic_bus_index, mic_capture)
+	else:
+		for i in range(AudioServer.get_bus_effect_count(mic_bus_index)):
+			var eff = AudioServer.get_bus_effect(mic_bus_index, i)
+			if eff is AudioEffectCapture:
+				mic_capture = eff
+				break
+		if not mic_capture:
+			mic_capture = AudioEffectCapture.new()
+			AudioServer.add_bus_effect(mic_bus_index, mic_capture)
+		AudioServer.set_bus_volume_db(mic_bus_index, 0.0)
+		AudioServer.set_bus_mute(mic_bus_index, true)
+
+	if not has_node("MicrophonePlayer"):
+		mic_player = AudioStreamPlayer.new()
+		mic_player.name = "MicrophonePlayer"
+		mic_player.stream = AudioStreamMicrophone.new()
+		mic_player.bus = "MicrophoneCapture"
+		mic_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+		add_child(mic_player)
+		mic_player.play()
+	else:
+		mic_player = get_node("MicrophonePlayer")
+
+func _create_volume_meter_ui() -> void:
+	var hud := CanvasLayer.new()
+	hud.name = "VolumeMeterHUD"
+	add_child(hud)
+
+	volume_meter_container = VBoxContainer.new()
+	volume_meter_container.custom_minimum_size = Vector2(36, 160)
+	volume_meter_container.visible = scream_jump_unlocked
+	hud.add_child(volume_meter_container)
+	volume_meter_container.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	volume_meter_container.offset_left = 20
+	volume_meter_container.offset_top = -180
+	volume_meter_container.offset_right = 80
+	volume_meter_container.offset_bottom = -20
+
+	volume_meter_bar = ProgressBar.new()
+	volume_meter_bar.fill_mode = ProgressBar.FILL_BOTTOM_TO_TOP
+	volume_meter_bar.custom_minimum_size = Vector2(28, 130)
+	volume_meter_bar.min_value = -60.0
+	volume_meter_bar.max_value = 0.0
+	volume_meter_bar.value = -60.0
+	volume_meter_bar.show_percentage = false
+	volume_meter_container.add_child(volume_meter_bar)
+
+	volume_meter_label = Label.new()
+	volume_meter_label.text = "-60 dBFS"
+	volume_meter_label.add_theme_font_size_override("font_size", 10)
+	volume_meter_label.add_theme_color_override("font_color", Color(0.8, 0.88, 0.98))
+	volume_meter_container.add_child(volume_meter_label)
+
+func _poll_microphone(delta: float = 0.016) -> void:
+	if mic_capture:
+		var frames := mic_capture.get_frames_available()
+		if frames > 0:
+			var buffer := mic_capture.get_buffer(frames)
+			var max_amp: float = 0.0
+			for sample in buffer:
+				var amp := maxf(absf(sample.x), absf(sample.y))
+				if amp > max_amp:
+					max_amp = amp
+			current_raw_volume = max_amp
+		else:
+			current_raw_volume = maxf(0.0, current_raw_volume - delta * 3.0)
+
+func get_raw_microphone_volume() -> float:
+	if simulated_mic_volume > current_raw_volume:
+		return simulated_mic_volume
+	return current_raw_volume
+
+func get_raw_volume_dbfs() -> float:
+	var raw := get_raw_microphone_volume()
+	if raw <= 0.0001:
+		return -60.0
+	return clampf(linear_to_db(raw), -60.0, 0.0)
+
+func get_effective_sound_level() -> float:
+	var sens_factor := clampf(microphone_sensitivity / 50.0, 0.1, 3.0)
+	return get_raw_microphone_volume() * sens_factor
 
 func _add_key_if_missing(action: String, keycode: Key) -> void:
 	if not InputMap.has_action(action):
@@ -215,7 +360,10 @@ func _physics_process(delta: float) -> void:
 			jump_buffer_timer = 0.0
 			coyote_timer = 0.0
 
+	_poll_microphone(delta)
 	_update_cooldowns(delta)
+	_update_voice_and_meter(delta)
+	_check_karma_penalty()
 	_handle_jump_charge(delta)
 
 	match current_state:
@@ -230,6 +378,78 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_update_visual_feedback()
 
+func _update_voice_and_meter(delta: float) -> void:
+	if volume_meter_container:
+		volume_meter_container.visible = scream_jump_unlocked
+
+	var raw_dbfs := get_raw_volume_dbfs()
+	if volume_meter_bar:
+		volume_meter_bar.value = raw_dbfs
+	if volume_meter_label:
+		volume_meter_label.text = "%d dBFS" % roundi(raw_dbfs)
+
+	var eff_level := get_effective_sound_level()
+	var is_sound_yapping := eff_level >= yap_volume_threshold or Input.is_action_pressed("yap") or Input.is_key_pressed(KEY_Y)
+
+	if is_sound_yapping:
+		yap_timer = 0.25
+		is_yapping = true
+		if is_crouching:
+			is_crouching = false
+			emit_signal("crouching_changed", false)
+		quiet_timer = 0.0
+	else:
+		yap_timer = maxf(0.0, yap_timer - delta)
+		is_yapping = yap_timer > 0.0
+
+	# 5-second quiet crouch rule on the ground (no Ctrl key)
+	var grounded := is_on_floor() or coyote_timer > 0.0
+	if grounded and current_state != State.WALL_RUNNING and not is_yapping:
+		quiet_timer += delta
+		if quiet_timer >= quiet_time_to_crouch and not is_crouching:
+			is_crouching = true
+			emit_signal("crouching_changed", true)
+	elif not grounded or current_state == State.WALL_RUNNING:
+		quiet_timer = 0.0
+
+	# Crouching strictly impossible on wall
+	if current_state == State.WALL_RUNNING and is_crouching:
+		is_crouching = false
+		emit_signal("crouching_changed", false)
+
+	# Jump Reset Rule: Must read below scream threshold for at least 0.1s before another jump can start
+	if not scream_jump_armed:
+		if eff_level >= scream_volume_threshold:
+			scream_silence_timer = 0.0
+		else:
+			scream_silence_timer += delta
+			if scream_silence_timer >= 0.1:
+				scream_jump_armed = true
+
+	if karma_penalty_cooldown > 0.0:
+		karma_penalty_cooldown = maxf(0.0, karma_penalty_cooldown - delta)
+
+func _check_karma_penalty() -> void:
+	var eff_level := get_effective_sound_level()
+	if eff_level < scream_volume_threshold or karma_penalty_cooldown > 0.0:
+		return
+
+	var near_interactable := false
+	for pos in interactable_positions:
+		if global_position.distance_to(pos) <= 3.0:
+			near_interactable = true
+			break
+
+	if not near_interactable and is_inside_tree():
+		for node in get_tree().get_nodes_in_group("interactable"):
+			if node is Node3D and global_position.distance_to(node.global_position) <= 3.0:
+				near_interactable = true
+				break
+
+	if near_interactable:
+		karma_penalty_cooldown = 5.0
+		emit_signal("karma_penalty_applied", 10)
+
 func _update_camera_tilt(delta: float) -> void:
 	if not camera:
 		return
@@ -240,8 +460,8 @@ func _update_camera_tilt(delta: float) -> void:
 	camera.rotation.z = lerp_angle(camera.rotation.z, target_roll, 8.0 * delta)
 
 func _update_cooldowns(delta: float) -> void:
-	# Dash cooldown counts down continuously.
-	if dash_cooldown > 0.0:
+	# Dash cooldown of 3 seconds only refreshes while grounded
+	if is_on_floor() and dash_cooldown > 0.0:
 		dash_cooldown = max(0.0, dash_cooldown - delta)
 		var is_ready: bool = dash_cooldown <= 0.0
 		emit_signal("dash_cooldown_changed", dash_cooldown, dash_cooldown_max, is_ready)
@@ -250,9 +470,14 @@ func _handle_jump_charge(delta: float) -> void:
 	if not scream_jump_unlocked:
 		return
 
+	var eff_level := get_effective_sound_level()
+	var sound_scream := eff_level >= scream_volume_threshold
+
 	if current_state == State.WALL_RUNNING:
-		# In wall-run state, pressing jump immediately ejects from the wall
-		if Input.is_action_just_pressed("jump"):
+		# In wall-run state, pressing jump or screaming ejects from the wall
+		if (scream_jump_armed and sound_scream) or Input.is_action_just_pressed("jump"):
+			scream_jump_armed = false
+			scream_silence_timer = 0.0
 			_wall_jump_eject()
 		return
 
@@ -262,12 +487,29 @@ func _handle_jump_charge(delta: float) -> void:
 
 	var can_jump_now := is_on_floor() or coyote_timer > 0.0
 
+	if scream_jump_armed and sound_scream:
+		scream_jump_armed = false
+		scream_silence_timer = 0.0
+		is_charging_jump = false
+		jump_charge = 0.0
+		emit_signal("jump_charge_changed", 0.0, false)
+		var scream_force: float = lerpf(min_jump_velocity, max_jump_velocity, clampf((eff_level - scream_volume_threshold) / (0.7 - scream_volume_threshold), 0.0, 1.0))
+		if can_jump_now:
+			velocity.y = scream_force
+			coyote_timer = 0.0
+		else:
+			buffered_jump_velocity = scream_force
+			jump_buffer_timer = jump_buffer_duration
+		return
+
 	if Input.is_action_pressed("jump") and can_jump_now:
 		is_charging_jump = true
 		jump_charge = min(1.0, jump_charge + delta * jump_charge_rate)
 		emit_signal("jump_charge_changed", jump_charge, true)
 	elif is_charging_jump:
 		var jump_vel: float = lerp(min_jump_velocity, max_jump_velocity, jump_charge)
+		scream_jump_armed = false
+		scream_silence_timer = 0.0
 		if can_jump_now:
 			velocity.y = jump_vel
 			coyote_timer = 0.0
@@ -306,9 +548,13 @@ func _physics_normal(delta: float) -> void:
 
 	var desired_dir := (cam_right * move_input.x + cam_forward * move_input.y).normalized()
 
+	# Movement rule: walk by either consistently yapping or by crouchwalking everywhere
+	var can_walk := is_crouching or is_yapping
+	var current_walk_speed := crouch_speed if is_crouching else (walk_speed if is_yapping else 0.0)
+
 	# Horizontal acceleration / friction
 	var current_h_vel := Vector3(velocity.x, 0.0, velocity.z)
-	var target_h_vel := desired_dir * walk_speed
+	var target_h_vel := desired_dir * current_walk_speed if can_walk else Vector3.ZERO
 	var accel := acceleration if is_on_floor() else air_acceleration
 	var deccel := friction if is_on_floor() else air_friction
 
@@ -320,6 +566,12 @@ func _physics_normal(delta: float) -> void:
 
 	velocity.x = current_h_vel.x
 	velocity.z = current_h_vel.z
+
+	# Visual crouch feedback
+	var visuals_node := get_node_or_null("Visuals") as Node3D
+	if visuals_node:
+		var target_scale_y := 0.65 if is_crouching else 1.0
+		visuals_node.scale.y = move_toward(visuals_node.scale.y, target_scale_y, delta * 4.0)
 
 	# Check Dash Input
 	if Input.is_action_just_pressed("dash") and dash_cooldown <= 0.0:
@@ -408,6 +660,10 @@ func _check_wall_collision() -> Dictionary:
 
 func _start_wall_run(norm: Vector3) -> void:
 	current_state = State.WALL_RUNNING
+	if is_crouching:
+		is_crouching = false
+		emit_signal("crouching_changed", false)
+	quiet_timer = 0.0
 	wall_normal = norm.normalized()
 	wall_run_timer = wall_run_max_duration
 	emit_signal("state_changed", "WALL_RUNNING")
@@ -525,9 +781,12 @@ func _update_ghost_feedback() -> void:
 	var active := current_state != State.NORMAL or is_charging_jump
 	for entry in ghost_materials:
 		var material := entry["material"] as StandardMaterial3D
-		material.emission = mat_body.emission if active else entry["emission"]
-		material.emission_energy_multiplier = (
-			mat_body.emission_energy_multiplier if active else entry["energy"])
+		var target_emission: Color = mat_body.emission if active else entry["emission"]
+		var target_energy: float = mat_body.emission_energy_multiplier if active else entry["energy"]
+		if material.emission != target_emission:
+			material.emission = target_emission
+		if not is_equal_approx(material.emission_energy_multiplier, target_energy):
+			material.emission_energy_multiplier = target_energy
 
 func respawn(spawn_pos: Vector3) -> void:
 	global_position = spawn_pos

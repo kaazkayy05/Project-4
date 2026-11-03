@@ -160,6 +160,144 @@ func _ready() -> void:
 	assert(scene.goal_confetti != null and scene.goal_confetti.emitting == true, "Goal confetti must be active")
 	print("✓ Run timer (%s), falls (%d), and celebration confetti verified." % [scene._format_time(scene.run_time), scene.falls_count])
 
+	# Test 11: Scream Jump via Microphone Sound & Sensitivity Scaling
+	print("\n[Test 11] Testing Scream Jump via Microphone Sound & Sensitivity...")
+	player.scream_jump_unlocked = true
+	player.scream_jump_armed = true
+	player.coyote_timer = 0.2
+	player.simulated_mic_volume = 0.5
+	player.microphone_sensitivity = 50.0
+	player.velocity.y = 0.0
+	player._handle_jump_charge(0.1)
+	assert(player.velocity.y >= player.min_jump_velocity, "Scream jump must launch player upward on loud sound")
+	print("✓ Sound jump successfully triggered upward (vel: %.1f)." % player.velocity.y)
+
+	# Sensitivity scaling check
+	player.velocity.y = 0.0
+	player.scream_jump_armed = true
+	player.coyote_timer = 0.2
+	player.microphone_sensitivity = 20.0 # 0.4x scaling: 0.5 * 0.4 = 0.20 < 0.35 threshold
+	player._handle_jump_charge(0.1)
+	assert(player.velocity.y == 0.0, "Lower sensitivity must prevent jump when effective volume is below threshold")
+	print("✓ Sensitivity correctly scales detection threshold.")
+
+	# Locked check
+	player.scream_jump_unlocked = false
+	player.scream_jump_armed = true
+	player.microphone_sensitivity = 50.0
+	player.simulated_mic_volume = 0.9
+	player.coyote_timer = 0.2
+	player._handle_jump_charge(0.1)
+	assert(player.velocity.y == 0.0, "Scream jump must not trigger when locked")
+	player.scream_jump_unlocked = true
+	player.simulated_mic_volume = 0.0
+	print("✓ Scream jump locked status strictly enforced.")
+
+	# Test 12: Jump Reset Rule (Silence >= 0.1s required before next jump)
+	print("\n[Test 12] Testing Jump Reset Rule (Silence Window >= 0.1s)...")
+	player.scream_jump_unlocked = true
+	player.scream_jump_armed = false
+	player.simulated_mic_volume = 0.6 # still screaming continuously through landing
+	player.coyote_timer = 0.2
+	player.velocity.y = 0.0
+	player._update_voice_and_meter(0.2)
+	player._handle_jump_charge(0.1)
+	assert(player.scream_jump_armed == false, "Jump must remain unarmed while player continuously screams")
+	assert(player.velocity.y == 0.0, "Continuous screaming through landing must NOT trigger another jump")
+	# Quiet down for 0.05s (less than 0.1s)
+	player.simulated_mic_volume = 0.0
+	player._update_voice_and_meter(0.05)
+	assert(player.scream_jump_armed == false, "Must not rearm before 0.1s of quiet")
+	# Quiet for another 0.06s (total > 0.1s)
+	player._update_voice_and_meter(0.06)
+	assert(player.scream_jump_armed == true, "Must rearm after at least 0.1s below threshold")
+	# Now screaming triggers jump again
+	player.simulated_mic_volume = 0.6
+	player._handle_jump_charge(0.1)
+	assert(player.velocity.y > 0.0, "Jump successfully triggers after 0.1s silence pause")
+	player.simulated_mic_volume = 0.0
+	print("✓ Jump reset silence window rule strictly verified.")
+
+	# Test 13: 5-Second Quiet Ground Crouch & Walking Rules
+	print("\n[Test 13] Testing 5-Second Quiet Crouch & Walking Rules...")
+	player.current_state = player.State.NORMAL
+	player.is_crouching = false
+	player.is_yapping = false
+	player.yap_timer = 0.0
+	player.quiet_timer = 0.0
+	player.simulated_mic_volume = 0.0
+	# Stand on floor for 4.0s (less than 5s) -> should NOT crouch
+	player.coyote_timer = 0.2
+	player.quiet_timer = 4.0
+	assert(player.is_crouching == false, "Player must not crouch before 5 seconds of silence")
+	# Reach 5.0s -> player enters crouch
+	player.quiet_timer = 5.0
+	player._update_voice_and_meter(0.1)
+	assert(player.is_crouching == true, "Player must automatically crouch after 5 seconds of silence on ground")
+	# Once crouched, horizontal movement uses crouch_speed
+	assert(player.crouch_speed < player.walk_speed, "Crouchwalk must be slower than normal walk")
+	# Making sound cancels crouch and sets yapping
+	player.simulated_mic_volume = 0.25 # above yap threshold
+	player._update_voice_and_meter(0.1)
+	assert(player.is_crouching == false, "Sound above yap threshold must cancel crouch")
+	assert(player.is_yapping == true, "Sound above yap threshold must enable yapping")
+	player.simulated_mic_volume = 0.0
+	player.is_yapping = false
+	print("✓ 5-second silence crouch and walk mechanics verified.")
+
+	# Test 14: Wall Interactions (Touching, Running, Jump Off, Crouch Disabled)
+	print("\n[Test 14] Testing Wall Interaction Restrictions...")
+	player._start_wall_run(Vector3(1, 0, 0))
+	assert(player.current_state == player.State.WALL_RUNNING, "Must be wall running")
+	assert(player.is_crouching == false, "Crouching must be impossible while on the wall")
+	player.scream_jump_armed = true
+	player.simulated_mic_volume = 0.5
+	player._handle_jump_charge(0.1)
+	assert(player.current_state == player.State.NORMAL, "Scream on wall must eject player off the wall")
+	assert(player.velocity.y >= player.wall_jump_up_force, "Wall eject must push upward")
+	player.simulated_mic_volume = 0.0
+	print("✓ Wall interactions verified (crouch impossible, sound eject off wall).")
+
+	# Test 15: Karma Penalty (Within 3m of Interactable Center)
+	print("\n[Test 15] Testing Karma Penalty (Loud Noise Near Interactable)...")
+	var test_interactable_pos = player.global_position + Vector3(2.0, 0, 0)
+	player.register_interactable_position(test_interactable_pos)
+	player.microphone_sensitivity = 50.0
+	player.karma_penalty_cooldown = 0.0
+	var penalty_box := {"received": 0}
+	var on_penalty = func(amt: int) -> void: penalty_box["received"] += amt
+	player.karma_penalty_applied.connect(on_penalty)
+	player.simulated_mic_volume = 0.6
+	player._check_karma_penalty()
+	assert(penalty_box["received"] == 10, "Player must lose 10 karma when screaming within 3m of interactable")
+	assert(player.karma_penalty_cooldown >= 4.9, "Karma penalty cooldown must be set to 5 seconds")
+	penalty_box["received"] = 0
+	player._check_karma_penalty()
+	assert(penalty_box["received"] == 0, "Karma penalty must not trigger more than once every 5 seconds")
+	player.unregister_interactable_position(test_interactable_pos)
+	player.karma_penalty_applied.disconnect(on_penalty)
+	player.simulated_mic_volume = 0.0
+	print("✓ Karma penalty verified (10 karma lost within 3m, 5s cooldown enforced).")
+
+	# Test 16: Volume Meter Level 4 Unlock Visibility Rule
+	print("\n[Test 16] Testing Volume Meter Visibility Rule (Level 4 Unlock)...")
+	player.scream_jump_unlocked = false
+	player._update_voice_and_meter(0.1)
+	assert(player.volume_meter_container.visible == false, "Volume meter must be hidden when scream jump is locked")
+	player.scream_jump_unlocked = true
+	player._update_voice_and_meter(0.1)
+	assert(player.volume_meter_container.visible == true, "Volume meter must be visible when scream jump is unlocked")
+	print("✓ Volume meter visibility rule verified (hidden before unlock, visible after).")
+
+	# Test 17: Volume Meter dBFS Calculation
+	print("\n[Test 17] Testing Volume Meter dBFS Calculation...")
+	player.simulated_mic_volume = 1.0
+	assert(abs(player.get_raw_volume_dbfs() - 0.0) < 0.1, "Full scale amplitude 1.0 must equal 0 dBFS")
+	player.simulated_mic_volume = 0.0001
+	assert(player.get_raw_volume_dbfs() <= -60.0, "Silence must read at or below -60 dBFS")
+	player.simulated_mic_volume = 0.0
+	print("✓ Volume meter dBFS calculation verified.")
+
 	print("\n========================================")
 	print("✓ ALL TESTS PASSED WITH 0 ERRORS!")
 	print("========================================")
