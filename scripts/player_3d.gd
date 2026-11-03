@@ -486,6 +486,9 @@ func _handle_jump_charge(delta: float) -> void:
 	if scream_jump_armed and sound_scream:
 		scream_jump_armed = false
 		scream_silence_timer = 0.0
+		is_charging_jump = false
+		jump_charge = 0.0
+		emit_signal("jump_charge_changed", 0.0, false)
 		var scream_force: float = lerpf(min_jump_velocity, max_jump_velocity, clampf((eff_level - scream_volume_threshold) / (0.7 - scream_volume_threshold), 0.0, 1.0))
 		if can_jump_now:
 			velocity.y = scream_force
@@ -774,9 +777,12 @@ func _update_ghost_feedback() -> void:
 	var active := current_state != State.NORMAL or is_charging_jump
 	for entry in ghost_materials:
 		var material := entry["material"] as StandardMaterial3D
-		material.emission = mat_body.emission if active else entry["emission"]
-		material.emission_energy_multiplier = (
-			mat_body.emission_energy_multiplier if active else entry["energy"])
+		var target_emission: Color = mat_body.emission if active else entry["emission"]
+		var target_energy: float = mat_body.emission_energy_multiplier if active else entry["energy"]
+		if material.emission != target_emission:
+			material.emission = target_emission
+		if not is_equal_approx(material.emission_energy_multiplier, target_energy):
+			material.emission_energy_multiplier = target_energy
 
 func respawn(spawn_pos: Vector3) -> void:
 	global_position = spawn_pos
