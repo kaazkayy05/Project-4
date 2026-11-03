@@ -240,6 +240,7 @@ func _update_sensitivity_label(value: float) -> void:
 
 
 func _start() -> void:
+	get_tree().set_meta(&"karma_total", 0)
 	_request_browser_mic_permission()
 	if mic_player:
 		mic_player.stop()

@@ -4,6 +4,7 @@ const SPAWN := Vector3(0, 0.1, 4)
 const SETTINGS_PATH := "user://settings.cfg"
 const ADMIN_LEVEL_SELECT = preload("res://scripts/admin_level_select.gd")
 const KARMA_CHOICE = preload("res://scripts/karma_choice.gd")
+const KARMA_BAR = preload("res://scripts/karma_bar.gd")
 
 @onready var player: Player3D = $Player3D
 
@@ -16,6 +17,9 @@ var settings_box: VBoxContainer
 var sensitivity_slider: HSlider
 var karma_collected := 0
 var karma_choices
+var karma_bar
+var karma_points: Array[Vector3] = []
+var karma_paths: Array[Dictionary] = []
 var story_found := false
 var completed := false
 
@@ -257,6 +261,48 @@ func _on_karma_choice(amount: int) -> void:
 	karma_label.text = "Karma: %d" % karma_collected
 
 
+func _add_karma_choices(positive_path: String, negative_path: String, points: Array) -> void:
+	karma_choices = KARMA_CHOICE.new()
+	add_child(karma_choices)
+	karma_choices.setup(player, positive_path, negative_path, Rect2(), Rect2())
+	karma_choices.choice_made.connect(_on_karma_choice)
+	for at in points:
+		karma_choices.add_interaction(at)
+
+
+func _add_karma_path(high: bool, from: Vector3, to: Vector3, width: float) -> void:
+	var body := StaticBody3D.new()
+	body.name = "HighKarmaPath" if high else "LowKarmaPath"
+	body.transform = Transform3D(Basis.looking_at(to - from, Vector3.UP),
+		(from + to) * 0.5 - Vector3(0, 0.2, 0))
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(width, 0.4, from.distance_to(to))
+	collision.shape = shape
+	collision.disabled = true
+	body.add_child(collision)
+	var visual := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = shape.size
+	visual.mesh = box
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.94, 0.82, 0.35) if high else Color(0.45, 0.06, 0.08)
+	material.emission_enabled = true
+	material.emission = material.albedo_color
+	visual.material_override = material
+	body.add_child(visual)
+	body.visible = false
+	add_child(body)
+	karma_paths.append({"high": high, "body": body, "collision": collision})
+
+
+func _update_karma_paths(karma: int) -> void:
+	for path in karma_paths:
+		var open: bool = karma >= 50 if path["high"] else karma <= -50
+		path["body"].visible = open
+		path["collision"].disabled = not open
+
+
 func _add_finish() -> void:
 	var white := Color(0.86, 0.92, 1.0)
 	_visual_box(Vector3(-1.4, 1.7, 71.5), Vector3(0.18, 3.4, 0.3), white)
@@ -317,6 +363,10 @@ func _make_hud() -> void:
 	story_label = _label(hud, "Story item: not found", Vector2(20, 76))
 	completion_label = _label(hud, "LEVEL 2 COMPLETE", Vector2(20, 112))
 	completion_label.hide()
+	karma_bar = KARMA_BAR.new()
+	hud.add_child(karma_bar)
+	karma_bar.setup(self)
+	karma_label.text = "Karma: %d" % karma_collected
 	pause_menu = CenterContainer.new()
 	pause_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	pause_menu.hide()

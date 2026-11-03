@@ -29,6 +29,8 @@ const WALKABLE_RECTS := [
 var dash_upgraded := false
 var base_dash_speed := 0.0
 var upgrade_label: Label
+var high_karma_step: CollisionShape3D
+var high_karma_step_visual: MeshInstance3D
 var scenery_roots: Array[Node3D] = []
 var scenery_visibility_timer := 0.0
 
@@ -56,6 +58,7 @@ func _ready() -> void:
 	_add_floor("RightRise", Vector3(30, -0.35, -19.5), Vector3(4, 0.7, 11))
 	_add_floor("RightEnd", Vector3(37, -0.35, -25), Vector3(14, 0.7, 4))
 	_add_floor("ExitYard", Vector3(-10, -0.35, 20), Vector3(4, 0.7, 4))
+	_add_high_karma_step()
 	_add_atmosphere()
 	_add_halloween_props()
 	_update_scenery_visibility()
@@ -67,6 +70,7 @@ func _ready() -> void:
 	completion_label.position.y = 142
 	upgrade_label = _label(dash_label.get_parent(), "DASH DISTANCE +50%", Vector2(20, 105))
 	upgrade_label.hide()
+	_on_karma_choice(0)
 	player.dash_cooldown_changed.connect(_on_dash_changed)
 	_on_dash_changed(0.0, player.dash_cooldown_max, true)
 	if OS.is_debug_build():
@@ -77,6 +81,9 @@ func _ready() -> void:
 		assert(18.0 - 10.0 == FINAL_GAP, "Lower stem gap must match dash gate")
 		assert(15.0 - 10.0 < base_dash_speed * player.dash_duration,
 			"Upper branch gap must be crossable with the original dash")
+		assert(12.5 - 10.0 < base_dash_speed * player.dash_duration
+			and 18.0 - 15.5 < base_dash_speed * player.dash_duration,
+			"High-karma step gaps must be crossable with the original dash")
 
 
 func _add_floor(floor_name: String, center: Vector3, size: Vector3) -> void:
@@ -493,10 +500,34 @@ func _collect(body: Node3D, area: Area3D, is_story: bool) -> void:
 func _on_karma_choice(amount: int) -> void:
 	karma_collected += amount
 	karma_label.text = "Karma: %d" % karma_collected
-	dash_upgraded = karma_collected > 50
-	player.dash_speed = base_dash_speed * (1.5 if dash_upgraded else 1.0)
-	upgrade_label.text = "DASH DISTANCE +50%"
+	_update_karma_route()
+
+
+func _update_karma_route() -> void:
+	var high := karma_collected >= 50
+	var low := karma_collected <= -50
+	if dash_upgraded == (high or low) and high_karma_step.disabled == not high:
+		return
+	dash_upgraded = high or low
+	high_karma_step.disabled = not high
+	high_karma_step_visual.visible = high
+	upgrade_label.text = "DASH COOLDOWN 2s" if high else "DASH DISTANCE +50%"
 	upgrade_label.visible = dash_upgraded
+
+
+func _add_high_karma_step() -> void:
+	var body := StaticBody3D.new()
+	body.name = "HighKarmaStep"
+	body.position = Vector3(-10, -0.35, 14)
+	high_karma_step = CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(3, 0.7, 3)
+	high_karma_step.shape = shape
+	body.add_child(high_karma_step)
+	add_child(body)
+	var box := BoxMesh.new()
+	box.size = shape.size
+	high_karma_step_visual = _mesh(box, body.position, Color(0.94, 0.82, 0.35), true)
 
 
 func _add_finish() -> void:
@@ -527,7 +558,7 @@ func _on_finish(body: Node3D) -> void:
 	if body != player or completed:
 		return
 	if not dash_upgraded:
-		upgrade_label.text = "KARMA MUST BE ABOVE 50"
+		upgrade_label.text = "KARMA MUST REACH +50 OR -50"
 		upgrade_label.show()
 		return
 	completed = true
@@ -536,6 +567,7 @@ func _on_finish(body: Node3D) -> void:
 
 
 func _process(delta: float) -> void:
+	_update_karma_route()
 	scenery_visibility_timer -= delta
 	if scenery_visibility_timer <= 0.0:
 		scenery_visibility_timer = 0.25

@@ -4,6 +4,7 @@ const SPAWN := Vector3(-27, 0.1, 0)
 const SETTINGS_PATH := "user://settings.cfg"
 const ADMIN_LEVEL_SELECT = preload("res://scripts/admin_level_select.gd")
 const KARMA_CHOICE = preload("res://scripts/karma_choice.gd")
+const KARMA_BAR = preload("res://scripts/karma_bar.gd")
 const TREE_TIERS := [
 	Vector3(3.5, 4.2, 5.2),
 	Vector3(5.6, 3.5, 4.8),
@@ -23,6 +24,7 @@ var settings_box: VBoxContainer
 var sensitivity_slider: HSlider
 var karma_collected := 0
 var karma_choices
+var karma_bar
 var christmas_bulbs: Array[Dictionary] = []
 var light_show_time := 0.0
 var story_found := false
@@ -619,8 +621,8 @@ func _respawn_in_place() -> void:
 	player.get_node("CameraPivot").rotation.y = -PI / 2.0
 	player.get_node("CameraPivot/SpringArm3D").rotation.x = 0.0
 	player.get_node("Visuals").rotation = Vector3.ZERO
-	karma_collected = 0
-	karma_label.text = "Karma: 0"
+	karma_collected = karma_bar.level_start
+	karma_label.text = "Karma: %d" % karma_collected
 	karma_choices.reset_interactions()
 	if story_found:
 		_add_pickup(Vector3(20, 1, 7), true)
@@ -692,6 +694,10 @@ func _make_hud() -> void:
 	story_label = _label(hud, "Story item: not found", Vector2(20, 76))
 	completion_label = _label(hud, "LEVEL 1 COMPLETE", Vector2(20, 112))
 	completion_label.hide()
+	karma_bar = KARMA_BAR.new()
+	hud.add_child(karma_bar)
+	karma_bar.setup(self)
+	karma_label.text = "Karma: %d" % karma_collected
 
 	pause_menu = CenterContainer.new()
 	pause_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
