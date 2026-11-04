@@ -92,7 +92,7 @@ body {
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
-
+<script>function requestBrowserMicPermission(){if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){if(window.project4MicRequestStarted)return;window.project4MicRequestStarted=true;navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){s.getTracks().forEach(function(t){t.stop();});console.log('Browser mic permission granted.');}).catch(function(e){console.warn('Mic permission error:',e);});}}window.addEventListener('click',requestBrowserMicPermission,{once:true});window.addEventListener('touchstart',requestBrowserMicPermission,{once:true});</script>
 	</head>
 	<body>
 		<canvas id="canvas">
@@ -111,29 +111,9 @@ body {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":15953296,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":19099828,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
-
-function requestBrowserMicPermission() {
-	if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-		if (window.project4MicRequestStarted) return;
-		window.project4MicRequestStarted = true;
-		navigator.mediaDevices.getUserMedia({ audio: true })
-			.then(function(stream) {
-				console.log('Browser microphone permission granted.');
-
-				stream.getTracks().forEach(function(track) {
-					track.stop();
-				});
-			})
-			.catch(function(err) {
-				console.warn('Browser microphone permission error or dismissed:', err);
-			});
-	}
-}
-window.addEventListener('click', requestBrowserMicPermission, { once: true });
-window.addEventListener('touchstart', requestBrowserMicPermission, { once: true });
 
 (function () {
 	const statusOverlay = document.getElementById('status');
