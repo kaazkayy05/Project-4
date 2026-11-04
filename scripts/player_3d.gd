@@ -506,8 +506,9 @@ func _physics_normal(delta: float) -> void:
 	var desired_dir := (cam_right * move_input.x + cam_forward * move_input.y).normalized()
 
 	# Movement rule: walk by either consistently yapping or by crouchwalking everywhere
-	var can_walk := is_crouching or is_yapping
-	var current_walk_speed := crouch_speed if is_crouching else (walk_speed if is_yapping else 0.0)
+	var waiting_to_crouch := quiet_timer > 0.0 and quiet_timer < quiet_time_to_crouch
+	var can_walk := is_crouching or is_yapping or waiting_to_crouch
+	var current_walk_speed := crouch_speed if is_crouching else (walk_speed if can_walk else 0.0)
 
 	# Horizontal acceleration / friction
 	var current_h_vel := Vector3(velocity.x, 0.0, velocity.z)
