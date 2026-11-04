@@ -110,6 +110,9 @@ func _ready() -> void:
 	_setup_inputs()
 	_setup_materials()
 	_apply_level_character()
+	if String(get_parent().name).begins_with("Level"):
+		is_crouching = true
+		$Visuals.scale.y = 0.65
 	load_microphone_settings()
 	_setup_microphone()
 	_create_volume_meter_ui()
