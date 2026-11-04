@@ -92,6 +92,8 @@ func _ready() -> void:
 	_add_pickup(Vector3(30, 1.0, -20), true)
 	_add_finish()
 	_make_hud()
+	karma_label.hide()
+	story_label.hide()
 	karma_label.text = "Karma: 0"
 	completion_label.text = "LEVEL 3 COMPLETE"
 	completion_label.position.y = 142
@@ -207,8 +209,6 @@ func _add_halloween_props() -> void:
 		Vector3(23, 0, -15.3)]:
 		_add_gravestone(at)
 	_add_neighborhood_screen()
-	_add_sign(Vector3(-20, 3.0, -3.0), "TRICK OR TREAT")
-	_add_sign(Vector3(-10, 3.0, 19.0), "THE WAY OUT")
 	# The lighted posts mark the launch edge without filling the gap.
 	for x in [-11.65, -8.35]:
 		_rod(Vector3(x, 0, 9.6), Vector3(x, 1.4, 9.6),
@@ -259,6 +259,10 @@ func _add_neighborhood_screen() -> void:
 					tree_models[number] = part
 					break
 	source.free() # Discard the asset's straight presentation road and cameras.
+	for template in tree_models.values():
+		for piece in template.get_children():
+			if piece.name.begins_with("Specimen name") or piece.name.begins_with("Tree specimen nameplate"):
+				piece.hide()
 	# Road-edge anchors keep every modeled walkway connected to the existing route.
 	_add_neighborhood_ground(frontages)
 	var house_scale := 0.45
@@ -267,6 +271,9 @@ func _add_neighborhood_screen() -> void:
 		var edge: Vector2 = plot[1]
 		var outward: Vector2 = plot[2]
 		var house: Node3D = house_models[number]
+		for piece in house.get_children():
+			if piece.name.begins_with("Handcrafted sign label"):
+				piece.hide()
 		var root_at := edge + outward * (18.0 * house_scale)
 		house.position = Vector3(root_at.x, 0, root_at.y)
 		house.rotation.y = atan2(-outward.x, -outward.y)
@@ -873,5 +880,8 @@ func _process(delta: float) -> void:
 
 
 func _update_scenery_visibility() -> void:
+	var player_position := player.global_position
 	for root in scenery_roots:
-		root.visible = player.global_position.distance_squared_to(root.global_position) <= 45.0 * 45.0
+		var should_show := player_position.distance_squared_to(root.global_position) <= 45.0 * 45.0
+		if root.visible != should_show:
+			root.visible = should_show

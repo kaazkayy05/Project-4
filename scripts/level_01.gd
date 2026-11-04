@@ -20,6 +20,7 @@ var karma_label: Label
 var story_label: Label
 var completion_label: Label
 var pause_menu: Control
+var settings_screen: Control
 var settings_box: VBoxContainer
 var sensitivity_slider: HSlider
 var karma_collected := 0
@@ -655,15 +656,16 @@ func _animate_christmas_lights(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
-		_toggle_pause()
+		if settings_screen:
+			_close_settings_screen()
+		else:
+			_toggle_pause()
 		get_viewport().set_input_as_handled()
 
 
 func _toggle_pause() -> void:
 	get_tree().paused = not get_tree().paused
 	pause_menu.visible = get_tree().paused
-	if not pause_menu.visible:
-		settings_box.hide()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if get_tree().paused else Input.MOUSE_MODE_CAPTURED
 
 
@@ -671,6 +673,23 @@ func _return_to_menu() -> void:
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+
+
+func _open_settings_screen() -> void:
+	var menu_scene := load("res://scenes/main_menu.tscn") as PackedScene
+	settings_screen = menu_scene.instantiate() as Control
+	settings_screen.process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_menu.get_parent().add_child(settings_screen)
+	pause_menu.hide()
+	settings_screen.call("_open_settings")
+	var back := settings_screen.get_node("Center/SettingsPanel/Margin/VBox/BackButton") as Button
+	back.pressed.connect(_close_settings_screen)
+
+
+func _close_settings_screen() -> void:
+	settings_screen.queue_free()
+	settings_screen = null
+	pause_menu.show()
 
 
 func _wake() -> void:
@@ -692,6 +711,8 @@ func _make_hud() -> void:
 	dash_label = _label(hud, "DASH READY [SHIFT]", Vector2(20, 20))
 	karma_label = _label(hud, "Karma: 0", Vector2(20, 48))
 	story_label = _label(hud, "Story item: not found", Vector2(20, 76))
+	karma_label.hide()
+	story_label.hide()
 	completion_label = _label(hud, "LEVEL 1 COMPLETE", Vector2(20, 112))
 	completion_label.hide()
 	karma_bar = KARMA_BAR.new()
@@ -711,41 +732,9 @@ func _make_hud() -> void:
 	panel.add_child(options)
 
 	_button(options, "Resume", _toggle_pause)
-	_button(options, "Settings", func() -> void: settings_box.show())
+	_button(options, "Settings", _open_settings_screen)
 	options.add_child(ADMIN_LEVEL_SELECT.new())
-	_button(options, "Return to Main Menu", _return_to_menu)
-
-	settings_box = VBoxContainer.new()
-	settings_box.hide()
-	options.add_child(settings_box)
-	var title := Label.new()
-	title.text = "Microphone sensitivity"
-	settings_box.add_child(title)
-	sensitivity_slider = HSlider.new()
-	sensitivity_slider.min_value = 0
-	sensitivity_slider.max_value = 100
-	sensitivity_slider.step = 1
-	sensitivity_slider.value = 50
-	settings_box.add_child(sensitivity_slider)
-	var config := ConfigFile.new()
-	if config.load(SETTINGS_PATH) == OK:
-		var sens_val: float = float(config.get_value("audio", "microphone_sensitivity", 50))
-		if sens_val < 25.0:
-			sens_val = 50.0
-		sensitivity_slider.set_value_no_signal(sens_val)
-	sensitivity_slider.value_changed.connect(_save_sensitivity)
-	_button(settings_box, "Recalibrate Microphone", func() -> void:
-		sensitivity_slider.value = 50.0
-		_save_sensitivity(50.0)
-	)
-	var info := Label.new()
-	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.custom_minimum_size = Vector2(300, 0)
-	info.text = "SETTINGS INFO:\n• Sensitivity: Adjusts microphone pickup gain.\n• Recalibrate: Resets sensitivity to optimal baseline for room noise.\n• Yapping: Speak continuously to walk.\n• Silence: 5s quiet on ground puts you in crouchwalk.\n• Scream Jump: Unlocks at Level 4 (reveals dBFS meter).\n• 3m Warning: Screaming near interactables loses 10 Karma!"
-	info.add_theme_font_size_override("font_size", 11)
-	info.add_theme_color_override("font_color", Color(0.75, 0.82, 0.9))
-	settings_box.add_child(info)
-	_button(settings_box, "Back", func() -> void: settings_box.hide())
+	_button(options, "Main Menu", _return_to_menu)
 
 
 func _label(parent: Node, value: String, at: Vector2) -> Label:

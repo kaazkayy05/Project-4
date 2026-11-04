@@ -13,6 +13,7 @@ var karma_label: Label
 var story_label: Label
 var completion_label: Label
 var pause_menu: Control
+var settings_screen: Control
 var settings_box: VBoxContainer
 var sensitivity_slider: HSlider
 var karma_collected := 0
@@ -22,6 +23,7 @@ var karma_points: Array[Vector3] = []
 var karma_paths: Array[Dictionary] = []
 var story_found := false
 var completed := false
+var mesh_materials: Dictionary = {}
 
 
 func _ready() -> void:
@@ -83,13 +85,17 @@ func _mesh(shape: Mesh, at: Vector3, color: Color, glowing := false) -> MeshInst
 	var visual := MeshInstance3D.new()
 	visual.mesh = shape
 	visual.position = at
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.8
-	if glowing:
-		material.emission_enabled = true
-		material.emission = color
-		material.emission_energy_multiplier = 2.0
+	var material_key := color.to_html() + (":glow" if glowing else ":flat")
+	var material: StandardMaterial3D = mesh_materials.get(material_key)
+	if material == null:
+		material = StandardMaterial3D.new()
+		material.albedo_color = color
+		material.roughness = 0.8
+		if glowing:
+			material.emission_enabled = true
+			material.emission = color
+			material.emission_energy_multiplier = 2.0
+		mesh_materials[material_key] = material
 	visual.material_override = material
 	add_child(visual)
 	return visual
@@ -169,9 +175,6 @@ func _add_donation_props() -> void:
 	for box_at in [Vector3(-4.5, 0, 5), Vector3(4.5, 0, 7),
 		Vector3(5.5, 0, 29), Vector3(24, 0, 37), Vector3(35, 0, 28)]:
 		_add_donation_box(box_at)
-	_add_sign(Vector3(0, 3.4, 1.2), "DONATION DROP-OFF")
-	_add_sign(Vector3(27, 3.4, 26.5), "CLOTHING SORTING")
-	_add_sign(Vector3(0, 3.4, 52), "GOODWILL")
 
 
 func _add_clothing_rack(at: Vector3, length: float) -> void:
@@ -337,15 +340,16 @@ func _process(_delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
-		_toggle_pause()
+		if settings_screen:
+			_close_settings_screen()
+		else:
+			_toggle_pause()
 		get_viewport().set_input_as_handled()
 
 
 func _toggle_pause() -> void:
 	get_tree().paused = not get_tree().paused
 	pause_menu.visible = get_tree().paused
-	if not pause_menu.visible:
-		settings_box.hide()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if get_tree().paused else Input.MOUSE_MODE_CAPTURED
 
 
@@ -355,12 +359,31 @@ func _return_to_menu() -> void:
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 
+func _open_settings_screen() -> void:
+	var menu_scene := load("res://scenes/main_menu.tscn") as PackedScene
+	settings_screen = menu_scene.instantiate() as Control
+	settings_screen.process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_menu.get_parent().add_child(settings_screen)
+	pause_menu.hide()
+	settings_screen.call("_open_settings")
+	var back := settings_screen.get_node("Center/SettingsPanel/Margin/VBox/BackButton") as Button
+	back.pressed.connect(_close_settings_screen)
+
+
+func _close_settings_screen() -> void:
+	settings_screen.queue_free()
+	settings_screen = null
+	pause_menu.show()
+
+
 func _make_hud() -> void:
 	var hud := CanvasLayer.new()
 	add_child(hud)
 	dash_label = _label(hud, "DASH READY [SHIFT]", Vector2(20, 20))
 	karma_label = _label(hud, "Karma: 0", Vector2(20, 48))
 	story_label = _label(hud, "Story item: not found", Vector2(20, 76))
+	karma_label.hide()
+	story_label.hide()
 	completion_label = _label(hud, "LEVEL 2 COMPLETE", Vector2(20, 112))
 	completion_label.hide()
 	karma_bar = KARMA_BAR.new()
@@ -377,26 +400,9 @@ func _make_hud() -> void:
 	var options := VBoxContainer.new()
 	panel.add_child(options)
 	_button(options, "Resume", _toggle_pause)
-	_button(options, "Settings", func() -> void: settings_box.show())
+	_button(options, "Settings", _open_settings_screen)
 	options.add_child(ADMIN_LEVEL_SELECT.new())
-	_button(options, "Return to Main Menu", _return_to_menu)
-	settings_box = VBoxContainer.new()
-	settings_box.hide()
-	options.add_child(settings_box)
-	var title := Label.new()
-	title.text = "Microphone sensitivity"
-	settings_box.add_child(title)
-	sensitivity_slider = HSlider.new()
-	sensitivity_slider.min_value = 0
-	sensitivity_slider.max_value = 100
-	sensitivity_slider.step = 1
-	sensitivity_slider.value = 50
-	settings_box.add_child(sensitivity_slider)
-	var config := ConfigFile.new()
-	if config.load(SETTINGS_PATH) == OK:
-		sensitivity_slider.set_value_no_signal(config.get_value("audio", "microphone_sensitivity", 50))
-	sensitivity_slider.value_changed.connect(_save_sensitivity)
-	_button(settings_box, "Back", func() -> void: settings_box.hide())
+	_button(options, "Main Menu", _return_to_menu)
 
 
 func _label(parent: Node, value: String, at: Vector2) -> Label:
