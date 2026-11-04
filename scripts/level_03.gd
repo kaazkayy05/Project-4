@@ -3,6 +3,26 @@ extends "res://scripts/level_02.gd"
 const HALLOWEEN_SPAWN := Vector3(-20, 0.1, 0)
 const FINAL_GAP := 8.0
 const HALLOWEEN_MODELS: PackedScene = preload("res://Models/HALLOWEEN_STREET_10_HOUSES_5_TREES.glb")
+const ZOMBIE_HANDS: PackedScene = preload("res://Models/Animated_Zombie_Graves_Blender_Pack/Zombie_Graves_Animated.glb")
+const SCARE_EVENT_COUNTS := {1: 1, 2: 2, 3: 1, 4: 2, 5: 1,
+	6: 1, 7: 2, 8: 1, 9: 2, 10: 1}
+const WITCH_CACKLE = preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/01_Witch_Cackle.wav")
+const GHOST_MOAN = preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/02_ghost_moan.wav")
+const BAT_SWARM = preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/Bat_Swarm_3_Seconds.wav")
+const SWING_WHOOSH = preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/06_Swing_Whoosh.wav")
+const WOOD_CHOP = preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/07_Chopping_Wood_Heavy_Booming_Echo.wav")
+const SCREAM = preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/08_Scream_Only.wav")
+const LAUGHS := [
+	preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/laughs/02_Evil_Laugh_Deep.wav"),
+	preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/laughs/03_Evil_Laugh_Manic.wav"),
+	preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/laughs/04_Evil_Laugh_Raspy.wav"),
+	preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/laughs/05_Evil_Laugh_Sinister.wav"),
+]
+const CROWS := [
+	preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/Crow_Alternatives/09_Crow_Caw.wav"),
+	preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/Crow_Alternatives/Crow_Caw_Alternative_Jofae.wav"),
+	preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/Crow_Alternatives/Crow_Caw_Alternative_Vixuxx.wav"),
+]
 const SIDEWALK_WIDTH := 1.2
 const GRASS_VERGE_WIDTH := 3.6
 const HOUSE_PLOTS := [
@@ -33,6 +53,12 @@ var high_karma_step: CollisionShape3D
 var high_karma_step_visual: MeshInstance3D
 var scenery_roots: Array[Node3D] = []
 var scenery_visibility_timer := 0.0
+var scare_rolls: Dictionary = {}
+var triggered_walkways: Dictionary = {}
+var scare_houses: Dictionary = {}
+var scarecrow_pivot: Node3D
+var swing_pivot: Node3D
+var swing_speaker: AudioStreamPlayer3D
 
 
 func _ready() -> void:
@@ -61,6 +87,7 @@ func _ready() -> void:
 	_add_high_karma_step()
 	_add_atmosphere()
 	_add_halloween_props()
+	_roll_house_scares()
 	_update_scenery_visibility()
 	_add_pickup(Vector3(30, 1.0, -20), true)
 	_add_finish()
@@ -245,6 +272,7 @@ func _add_neighborhood_screen() -> void:
 		house.rotation.y = atan2(-outward.x, -outward.y)
 		house.scale = Vector3.ONE * house_scale
 		add_child(house)
+		scare_houses[number] = house
 		scenery_roots.append(house)
 		_make_model_walkway_walkable(house)
 		var door_at := Vector3(edge.x, 0, edge.y) + Vector3(outward.x, 0, outward.y) * 6.5
@@ -566,8 +594,275 @@ func _on_finish(body: Node3D) -> void:
 	get_tree().call_deferred("change_scene_to_file", "res://scenes/level_04.tscn")
 
 
+func _roll_house_scares() -> void:
+	for number in SCARE_EVENT_COUNTS:
+		scare_rolls[number] = randi_range(0, SCARE_EVENT_COUNTS[number])
+	triggered_walkways.clear()
+
+
+func _check_house_walkways(delta: float) -> void:
+	if completed:
+		return
+	var at := Vector2(player.global_position.x, player.global_position.z)
+	for plot in HOUSE_PLOTS:
+		var number: int = plot[0]
+		var edge: Vector2 = plot[1]
+		var outward: Vector2 = plot[2]
+		var offset := at - edge
+		var along := offset.dot(outward)
+		var across := (offset - outward * along).length()
+		var on_walkway := player.is_on_floor() \
+			and along >= 0.35 and along <= 6.5 and across <= 0.85
+		if number == 8 and scarecrow_pivot and on_walkway:
+			_aim_scarecrow(delta)
+		if triggered_walkways.has(number):
+			continue
+		if on_walkway:
+			triggered_walkways[number] = true
+			if scare_rolls[number] > 0:
+				_run_house_scare(number, scare_rolls[number])
+
+
+func _run_house_scare(number: int, event_number: int) -> void:
+	var house: Node3D = scare_houses[number]
+	match number:
+		1:
+			_spider_crosses(house)
+		2:
+			if event_number == 1:
+				_play_house_audio(house, WITCH_CACKLE)
+			else:
+				_witch_shadow(house)
+		3:
+			_play_house_audio(house, BAT_SWARM)
+			_bats_fly(house)
+		4:
+			if event_number == 1:
+				_play_house_audio(house, GHOST_MOAN)
+			else:
+				_ghosts_sway(house)
+		5:
+			var laugh := _play_house_audio(house, LAUGHS.pick_random())
+			_glow_house_pumpkins(house, laugh)
+		6:
+			_two_faced_man(house)
+		7:
+			if event_number == 1:
+				_play_house_audio(house, SCREAM)
+			else:
+				_play_two_crows(house)
+		8:
+			_turn_scarecrow(house)
+		9:
+			if event_number == 1:
+				var swing_sound := _play_house_audio(house, SWING_WHOOSH)
+				_swing_moves(house, swing_sound)
+			else:
+				_play_house_audio(house, WOOD_CHOP)
+		10:
+			_zombie_hands(house)
+
+
+func _new_house_audio(house: Node3D, stream: AudioStream) -> AudioStreamPlayer3D:
+	var speaker := AudioStreamPlayer3D.new()
+	speaker.stream = stream
+	speaker.position = Vector3(0, 2, 5)
+	house.add_child(speaker)
+	return speaker
+
+
+func _play_house_audio(house: Node3D, stream: AudioStream) -> AudioStreamPlayer3D:
+	var speaker := _new_house_audio(house, stream)
+	speaker.finished.connect(speaker.queue_free)
+	speaker.play()
+	return speaker
+
+
+func _play_two_crows(house: Node3D) -> void:
+	for repeat in range(2):
+		var speaker := _new_house_audio(house, CROWS.pick_random())
+		speaker.play()
+		await speaker.finished
+		speaker.queue_free()
+
+
+func _effect_root(house: Node3D, at: Vector3) -> Node3D:
+	var effect := Node3D.new()
+	effect.position = at
+	house.add_child(effect)
+	return effect
+
+
+func _effect_shape(parent: Node3D, mesh: Mesh, at: Vector3,
+		size: Vector3, color: Color) -> MeshInstance3D:
+	var visual := MeshInstance3D.new()
+	visual.mesh = mesh
+	visual.position = at
+	visual.scale = size
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	if color.a < 1.0:
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	visual.material_override = material
+	visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(visual)
+	return visual
+
+
+func _spider_crosses(house: Node3D) -> void:
+	var spider := _effect_root(house, Vector3(-8, 1, 5))
+	_effect_shape(spider, SphereMesh.new(), Vector3.ZERO,
+		Vector3(1.1, 0.7, 0.7), Color(0.025, 0.015, 0.035))
+	_effect_shape(spider, SphereMesh.new(), Vector3(0.65, 0.05, 0),
+		Vector3(0.55, 0.45, 0.5), Color(0.025, 0.015, 0.035))
+	for side in [-1.0, 1.0]:
+		for leg in range(4):
+			var limb := _effect_shape(spider, BoxMesh.new(),
+				Vector3(-0.35 + leg * 0.25, side * 0.55, 0),
+				Vector3(0.08, 1.1, 0.08), Color(0.025, 0.015, 0.035))
+			limb.rotation.z = side * (0.45 + leg * 0.13)
+	var tween := create_tween().bind_node(spider)
+	tween.tween_property(spider, "position", Vector3(8, 7, 5), 2.0)
+	tween.tween_callback(spider.queue_free)
+
+
+func _witch_shadow(house: Node3D) -> void:
+	var witch := _effect_root(house, Vector3(-11, 11, 6))
+	var shadow := Color(0.015, 0.01, 0.025, 0.85)
+	_effect_shape(witch, SphereMesh.new(), Vector3.ZERO,
+		Vector3(1.2, 1.7, 0.3), shadow)
+	var hat := CylinderMesh.new()
+	hat.top_radius = 0.0
+	hat.bottom_radius = 0.8
+	hat.height = 1.3
+	_effect_shape(witch, hat, Vector3(0, 1.2, 0), Vector3.ONE, shadow)
+	_effect_shape(witch, BoxMesh.new(), Vector3(0, -0.8, 0),
+		Vector3(4, 0.12, 0.12), shadow)
+	var tween := create_tween().bind_node(witch)
+	tween.tween_property(witch, "position", Vector3(11, 13, 6), 1.7)
+	tween.tween_callback(witch.queue_free)
+
+
+func _ghosts_sway(house: Node3D) -> void:
+	for side in [-1.0, 1.0]:
+		var anchor := Vector3(-6.8, 3.8, 7.7) if side < 0 else Vector3(7.1, 3.8, 7.7)
+		var ghost := _effect_root(house, anchor)
+		for piece in house.get_children():
+			if (piece.name.begins_with("Ghost ")
+					or piece.name.begins_with("Spectral sheet trailing down")) \
+					and signf(piece.position.x) == side:
+				piece.reparent(ghost, true)
+		var tween := create_tween().bind_node(ghost)
+		for cycle in range(4):
+			tween.tween_property(ghost, "rotation:z", side * 0.25, 0.3125)
+			tween.tween_property(ghost, "rotation:z", -side * 0.25, 0.625)
+			tween.tween_property(ghost, "rotation:z", 0.0, 0.3125)
+
+
+func _glow_house_pumpkins(house: Node3D, speaker: AudioStreamPlayer3D) -> void:
+	var lights: Array[OmniLight3D] = []
+	for piece in house.get_children():
+		if not piece.name.begins_with("Carved pumpkin body"):
+			continue
+		var light := OmniLight3D.new()
+		light.position = piece.position + Vector3(0, 0.5, 0.3)
+		light.light_color = Color(1.0, 0.25, 0.025)
+		light.omni_range = 3.0
+		light.light_energy = 3.0
+		house.add_child(light)
+		lights.append(light)
+	speaker.finished.connect(func() -> void:
+		for light in lights:
+			var fade := create_tween().bind_node(light)
+			fade.tween_property(light, "light_energy", 0.0, 0.25)
+			fade.tween_callback(light.queue_free)
+	)
+
+
+func _two_faced_man(house: Node3D) -> void:
+	var figure := _effect_root(house, Vector3(-5.9, 2.6, 4.45))
+	_effect_shape(figure, BoxMesh.new(), Vector3(0, -0.65, 0),
+		Vector3(1.5, 1.2, 0.35), Color(0.11, 0.08, 0.13))
+	for side in [-1.0, 1.0]:
+		_effect_shape(figure, SphereMesh.new(), Vector3(side * 0.38, 0.2, 0),
+			Vector3(0.75, 0.95, 0.55), Color(0.68, 0.63, 0.61))
+		_effect_shape(figure, SphereMesh.new(), Vector3(side * 0.38, 0.25, 0.31),
+			Vector3(0.12, 0.12, 0.08), Color(0.04, 0.01, 0.04))
+	var tween := create_tween().bind_node(figure)
+	tween.tween_interval(1.5)
+	tween.tween_callback(figure.queue_free)
+
+
+func _bats_fly(house: Node3D) -> void:
+	for index in range(4):
+		var bat := _effect_root(house, Vector3(-7 - index, 7 + index, 6))
+		_effect_shape(bat, SphereMesh.new(), Vector3.ZERO,
+			Vector3(0.45, 0.35, 0.35), Color(0.025, 0.015, 0.035))
+		for side in [-1.0, 1.0]:
+			var wing := _effect_shape(bat, BoxMesh.new(),
+				Vector3(side * 0.6, 0.08, 0), Vector3(1.1, 0.14, 0.4),
+				Color(0.025, 0.015, 0.035))
+			wing.rotation.z = side * 0.3
+		var tween := create_tween().bind_node(bat)
+		tween.tween_property(bat, "position", Vector3(8 + index, 9 + index, 6), 3.0)
+		tween.tween_callback(bat.queue_free)
+
+
+func _turn_scarecrow(house: Node3D) -> void:
+	scarecrow_pivot = _effect_root(house, Vector3(7.8, 0, 8.4))
+	for piece in house.get_children():
+		if piece.name.begins_with("Scarecrow "):
+			piece.reparent(scarecrow_pivot, true)
+
+
+func _aim_scarecrow(delta: float) -> void:
+	var house: Node3D = scare_houses[8]
+	var target := house.to_local(player.global_position) - scarecrow_pivot.position
+	var facing := atan2(target.x, target.z)
+	scarecrow_pivot.rotation.y = lerp_angle(
+		scarecrow_pivot.rotation.y, facing, minf(1.0, delta * 5.0))
+
+
+func _swing_moves(house: Node3D, speaker: AudioStreamPlayer3D) -> void:
+	swing_pivot = _effect_root(house, Vector3(6.4, 3.5, 10.5))
+	for piece in house.get_children():
+		if piece.name.begins_with("Haunted porch tire swing seat") \
+				or piece.name.begins_with("Suspended swing rope"):
+			piece.reparent(swing_pivot, true)
+	swing_speaker = speaker
+	speaker.finished.connect(func() -> void:
+		swing_pivot.rotation.x = 0.0
+		swing_speaker = null
+	)
+
+
+func _update_swing_from_audio() -> void:
+	if not swing_pivot or not swing_speaker or not swing_speaker.playing:
+		return
+	var audio_time := swing_speaker.get_playback_position()
+	swing_pivot.rotation.x = 0.4 * sin(TAU * audio_time / 1.65)
+
+
+func _zombie_hands(house: Node3D) -> void:
+	var hands := ZOMBIE_HANDS.instantiate() as Node3D
+	hands.position = Vector3(0, 0, 8)
+	hands.scale = Vector3.ONE * 1.4
+	house.add_child(hands)
+	for part in hands.get_children():
+		if part is AnimationPlayer \
+				or part.name.begins_with("Hand_") \
+				or part.name.begins_with("Grave_"):
+			continue
+		part.queue_free()
+	var animation_player := hands.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if animation_player:
+		animation_player.play("ZombieHands_Break_Through_Soil")
+
+
 func _process(delta: float) -> void:
-	_update_karma_route()
+	_check_house_walkways(delta)
+	_update_swing_from_audio()
 	scenery_visibility_timer -= delta
 	if scenery_visibility_timer <= 0.0:
 		scenery_visibility_timer = 0.25

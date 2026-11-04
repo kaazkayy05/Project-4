@@ -22,6 +22,7 @@ driver/enable_input=true
 [autoload]
 
 MCPGameBridge="res://addons/godot_mcp/game_bridge/mcp_game_bridge.gd"
+MicrophoneManager="*res://scripts/microphone_manager.gd"
 
 [display]
 

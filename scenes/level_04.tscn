@@ -10,7 +10,7 @@ script = ExtResource("1")
 [node name="Player3D" parent="." instance=ExtResource("2")]
 process_mode = 1
 position = Vector3(0, 0.1, -3)
-scream_jump_unlocked = false
+scream_jump_unlocked = true
 wall_run_unlocked = false
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
