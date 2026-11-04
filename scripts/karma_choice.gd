@@ -8,6 +8,8 @@ const PICTURE_SIZE := 1.3
 const GLOW_COLOR := Color(0.94, 0.82, 0.35)
 const NOISE_REACH := 3.0
 const NOISE_COOLDOWN := 5.0
+const TICK_RANGE := 12.0
+const TICK_VOLUME_DB := -14.0
 
 var player: Player3D
 var entries: Array[Dictionary] = []
@@ -17,6 +19,7 @@ var prompt: Label
 var active_index := -1
 var open_index := -1
 var noise_timer := 0.0
+var tick_stream: AudioStreamWAV
 
 
 func setup(target: Player3D, positive_path: String, negative_path: String,
@@ -56,7 +59,16 @@ func add_interaction(at: Vector3) -> void:
 	add_child(choice)
 	_add_option(choice, positive_texture, "1", -0.75)
 	_add_option(choice, negative_texture, "2", 0.75)
-	entries.append({"position": at, "used": false, "glow": glow, "choice": choice})
+	var ticker := AudioStreamPlayer3D.new()
+	ticker.position = at + Vector3(0, 1.0, 0)
+	ticker.stream = _tick_stream()
+	ticker.volume_db = TICK_VOLUME_DB
+	ticker.unit_size = 2.0
+	ticker.max_distance = TICK_RANGE
+	ticker.autoplay = true
+	ticker.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(ticker)
+	entries.append({"position": at, "used": false, "glow": glow, "choice": choice, "ticker": ticker})
 	if is_instance_valid(player) and player.has_method("register_interactable_position"):
 		player.register_interactable_position(at)
 
@@ -66,8 +78,32 @@ func reset_interactions() -> void:
 	for entry in entries:
 		entry["used"] = false
 		entry["glow"].hide()
+		if not entry["ticker"].playing:
+			entry["ticker"].play()
 	active_index = -1
 	prompt.hide()
+
+
+func _tick_stream() -> AudioStreamWAV:
+	if tick_stream:
+		return tick_stream
+	var rate := 22050
+	var data := PackedByteArray()
+	data.resize(rate * 2)
+	for half in 2:
+		var pitch := 2200.0 if half == 0 else 1700.0
+		var start := int(rate * 0.5) * half
+		for i in int(rate * 0.03):
+			var t := float(i) / rate
+			var sample := sin(TAU * pitch * t) * exp(-t * 180.0) * 0.6
+			data.encode_s16((start + i) * 2, int(sample * 32767))
+	tick_stream = AudioStreamWAV.new()
+	tick_stream.format = AudioStreamWAV.FORMAT_16_BITS
+	tick_stream.mix_rate = rate
+	tick_stream.data = data
+	tick_stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	tick_stream.loop_end = rate
+	return tick_stream
 
 
 func _choice_texture(path: String, region: Rect2, good: bool) -> Texture2D:
@@ -172,6 +208,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _choose(amount: int) -> void:
 	entries[open_index]["used"] = true
 	entries[open_index]["glow"].hide()
+	entries[open_index]["ticker"].stop()
 	choice_made.emit(amount)
 	_close_choice()
 
