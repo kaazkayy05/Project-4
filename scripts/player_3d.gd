@@ -79,9 +79,6 @@ var karma_penalty_cooldown: float = 0.0
 var interactable_positions: Array[Vector3] = []
 var simulated_mic_volume: float = 0.0
 var current_raw_volume: float = 0.0
-var mic_capture: AudioEffectCapture
-var mic_player: AudioStreamPlayer
-var mic_bus_index: int = -1
 
 var volume_meter_container: VBoxContainer
 var volume_meter_bar: ProgressBar
@@ -114,7 +111,6 @@ func _ready() -> void:
 		is_crouching = true
 		$Visuals.scale.y = 0.65
 	load_microphone_settings()
-	_setup_microphone()
 	_create_volume_meter_ui()
 	skip_next_mouse_motion = OS.has_feature("web")
 	dash_cooldown = 0.0
@@ -139,9 +135,6 @@ func load_microphone_settings() -> void:
 		microphone_sensitivity = float(config.get_value("audio", "microphone_sensitivity", microphone_sensitivity))
 		if microphone_sensitivity < 25.0:
 			microphone_sensitivity = 50.0
-		var saved_dev: String = config.get_value("audio", "microphone_device", "Default")
-		if saved_dev in AudioServer.get_input_device_list():
-			AudioServer.input_device = saved_dev
 
 func register_interactable_position(pos: Vector3) -> void:
 	if not pos in interactable_positions:
@@ -149,43 +142,6 @@ func register_interactable_position(pos: Vector3) -> void:
 
 func unregister_interactable_position(pos: Vector3) -> void:
 	interactable_positions.erase(pos)
-
-func _exit_tree() -> void:
-	if mic_player:
-		mic_player.stop()
-
-func _setup_microphone() -> void:
-	mic_bus_index = AudioServer.get_bus_index("MicrophoneCapture")
-	if mic_bus_index == -1:
-		AudioServer.add_bus()
-		mic_bus_index = AudioServer.bus_count - 1
-		AudioServer.set_bus_name(mic_bus_index, "MicrophoneCapture")
-		AudioServer.set_bus_volume_db(mic_bus_index, 0.0)
-		AudioServer.set_bus_mute(mic_bus_index, true)
-		mic_capture = AudioEffectCapture.new()
-		AudioServer.add_bus_effect(mic_bus_index, mic_capture)
-	else:
-		for i in range(AudioServer.get_bus_effect_count(mic_bus_index)):
-			var eff = AudioServer.get_bus_effect(mic_bus_index, i)
-			if eff is AudioEffectCapture:
-				mic_capture = eff
-				break
-		if not mic_capture:
-			mic_capture = AudioEffectCapture.new()
-			AudioServer.add_bus_effect(mic_bus_index, mic_capture)
-		AudioServer.set_bus_volume_db(mic_bus_index, 0.0)
-		AudioServer.set_bus_mute(mic_bus_index, true)
-
-	if not has_node("MicrophonePlayer"):
-		mic_player = AudioStreamPlayer.new()
-		mic_player.name = "MicrophonePlayer"
-		mic_player.stream = AudioStreamMicrophone.new()
-		mic_player.bus = "MicrophoneCapture"
-		mic_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
-		add_child(mic_player)
-		mic_player.play()
-	else:
-		mic_player = get_node("MicrophonePlayer")
 
 func _create_volume_meter_ui() -> void:
 	var hud := CanvasLayer.new()
@@ -218,18 +174,16 @@ func _create_volume_meter_ui() -> void:
 	volume_meter_container.add_child(volume_meter_label)
 
 func _poll_microphone(delta: float = 0.016) -> void:
-	if mic_capture:
-		var frames := mic_capture.get_frames_available()
-		if frames > 0:
-			var buffer := mic_capture.get_buffer(frames)
-			var max_amp: float = 0.0
-			for sample in buffer:
-				var amp := maxf(absf(sample.x), absf(sample.y))
-				if amp > max_amp:
-					max_amp = amp
-			current_raw_volume = max_amp
-		else:
-			current_raw_volume = maxf(0.0, current_raw_volume - delta * 3.0)
+	var buffer := MicrophoneManager.read_samples()
+	if not buffer.is_empty():
+		var max_amp: float = 0.0
+		for sample in buffer:
+			var amp := maxf(absf(sample.x), absf(sample.y))
+			if amp > max_amp:
+				max_amp = amp
+		current_raw_volume = max_amp
+	else:
+		current_raw_volume = maxf(0.0, current_raw_volume - delta * 3.0)
 
 func get_raw_microphone_volume() -> float:
 	if simulated_mic_volume > current_raw_volume:

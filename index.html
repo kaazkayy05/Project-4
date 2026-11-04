@@ -117,9 +117,15 @@ const engine = new Engine(GODOT_CONFIG);
 
 function requestBrowserMicPermission() {
 	if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+		if (window.project4MicRequestStarted) return;
+		window.project4MicRequestStarted = true;
 		navigator.mediaDevices.getUserMedia({ audio: true })
 			.then(function(stream) {
 				console.log('Browser microphone permission granted.');
+
+				stream.getTracks().forEach(function(track) {
+					track.stop();
+				});
 			})
 			.catch(function(err) {
 				console.warn('Browser microphone permission error or dismissed:', err);
