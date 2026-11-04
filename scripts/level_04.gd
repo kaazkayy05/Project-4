@@ -16,7 +16,7 @@ const BLOCKING_PARTS := [
 	"STORY_ITEM_PEDESTAL_0039", "STORY_ITEM_PEDESTAL_0041",
 ]
 
-var voice_unlocked := false
+var voice_unlocked := true
 var story_count := 0
 var voice_label: Label
 
@@ -24,7 +24,7 @@ var voice_label: Label
 func _ready() -> void:
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	player.scream_jump_unlocked = false
+	player.scream_jump_unlocked = true
 	player.wall_run_unlocked = false
 	_add_greybox()
 	_add_locker_room()
@@ -38,7 +38,7 @@ func _ready() -> void:
 	story_label.text = "Stands memories: 0 / 2"
 	completion_label.text = "LEVEL 4 COMPLETE"
 	completion_label.position.y = 145
-	voice_label = _label(dash_label.get_parent(), "VOICE LOCKED", Vector2(20, 105))
+	voice_label = _label(dash_label.get_parent(), "SCREAM JUMP: HOLD SPACE, RELEASE TO RISE", Vector2(20, 105))
 	player.dash_cooldown_changed.connect(_on_dash_changed)
 	_on_dash_changed(0.0, player.dash_cooldown_max, true)
 	player.jump_charge_changed.connect(_on_jump_charge)
@@ -205,7 +205,7 @@ func _add_voice_unlock() -> void:
 	add_child(area)
 	area.body_entered.connect(_unlock_voice)
 	var sign := Label3D.new()
-	sign.text = "YOUR VOICE RETURNS\nHOLD SPACE, THEN RELEASE"
+	sign.text = "SCREAM JUMP READY\nHOLD SPACE, THEN RELEASE"
 	sign.position = Vector3(0, 2.7, -13.0)
 	sign.font_size = 64
 	sign.pixel_size = 0.005
