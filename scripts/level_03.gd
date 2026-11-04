@@ -3,6 +3,7 @@ extends "res://scripts/level_02.gd"
 const HALLOWEEN_SPAWN := Vector3(-20, 0.1, 0)
 const FINAL_GAP := 8.0
 const HALLOWEEN_MODELS: PackedScene = preload("res://Models/HALLOWEEN_STREET_10_HOUSES_5_TREES.glb")
+const ZOMBIE_HANDS: PackedScene = preload("res://Models/Animated_Zombie_Graves_Blender_Pack/Zombie_Graves_Animated.glb")
 const SCARE_EVENT_COUNTS := {1: 1, 2: 2, 3: 1, 4: 2, 5: 1,
 	6: 1, 7: 2, 8: 1, 9: 2, 10: 1}
 const WITCH_CACKLE = preload("res://Halloween_Game_Sound_Effects_Real_Recordings_No_Help/01_Witch_Cackle.wav")
@@ -54,6 +55,8 @@ var scare_rolls: Dictionary = {}
 var triggered_walkways: Dictionary = {}
 var scare_houses: Dictionary = {}
 var scarecrow_pivot: Node3D
+var swing_pivot: Node3D
+var swing_speaker: AudioStreamPlayer3D
 
 
 func _ready() -> void:
@@ -712,13 +715,18 @@ func _witch_shadow(house: Node3D) -> void:
 
 func _ghosts_sway(house: Node3D) -> void:
 	for side in [-1.0, 1.0]:
-		var ghost := _effect_root(house, Vector3(side * 4, 3.2, 5))
-		_effect_shape(ghost, SphereMesh.new(), Vector3.ZERO,
-			Vector3(1.4, 2.5, 0.8), Color(0.7, 0.83, 1.0, 0.45))
+		var anchor := Vector3(-6.8, 3.8, 7.7) if side < 0 else Vector3(7.1, 3.8, 7.7)
+		var ghost := _effect_root(house, anchor)
+		for piece in house.get_children():
+			if (piece.name.begins_with("Ghost ")
+					or piece.name.begins_with("Spectral sheet trailing down")) \
+					and signf(piece.position.x) == side:
+				piece.reparent(ghost, true)
 		var tween := create_tween().bind_node(ghost)
-		tween.tween_property(ghost, "position:x", side * 2.0, 0.75)
-		tween.tween_property(ghost, "position:x", side * 4.0, 0.75)
-		tween.tween_callback(ghost.queue_free)
+		for cycle in range(4):
+			tween.tween_property(ghost, "rotation:z", side * 0.25, 0.3125)
+			tween.tween_property(ghost, "rotation:z", -side * 0.25, 0.625)
+			tween.tween_property(ghost, "rotation:z", 0.0, 0.3125)
 
 
 func _glow_house_pumpkins(house: Node3D, speaker: AudioStreamPlayer3D) -> void:
@@ -786,40 +794,44 @@ func _aim_scarecrow(delta: float) -> void:
 
 
 func _swing_moves(house: Node3D, speaker: AudioStreamPlayer3D) -> void:
-	var pivot := _effect_root(house, Vector3(6.4, 3.5, 10.5))
+	swing_pivot = _effect_root(house, Vector3(6.4, 3.5, 10.5))
 	for piece in house.get_children():
 		if piece.name.begins_with("Haunted porch tire swing seat") \
 				or piece.name.begins_with("Suspended swing rope"):
-			piece.reparent(pivot, true)
-	var tween := create_tween().bind_node(pivot).set_loops()
-	tween.tween_property(pivot, "rotation:x", 0.4, 0.3)
-	tween.tween_property(pivot, "rotation:x", -0.4, 0.6)
-	tween.tween_property(pivot, "rotation:x", 0.0, 0.3)
+			piece.reparent(swing_pivot, true)
+	swing_speaker = speaker
 	speaker.finished.connect(func() -> void:
-		tween.kill()
-		create_tween().bind_node(pivot).tween_property(
-			pivot, "rotation:x", 0.0, 0.3)
+		swing_pivot.rotation.x = 0.0
+		swing_speaker = null
 	)
 
 
+func _update_swing_from_audio() -> void:
+	if not swing_pivot or not swing_speaker or not swing_speaker.playing:
+		return
+	var audio_time := swing_speaker.get_playback_position()
+	swing_pivot.rotation.x = 0.4 * sin(TAU * audio_time / 1.65)
+
+
 func _zombie_hands(house: Node3D) -> void:
-	for grave in [Vector3(-8.5, -1.0, 8), Vector3(8, -1.0, 7.2)]:
-		var hand := _effect_root(house, grave)
-		var skin := Color(0.26, 0.34, 0.22)
-		_effect_shape(hand, BoxMesh.new(), Vector3(0, 0.5, 0),
-			Vector3(0.6, 1.0, 0.3), skin)
-		for finger in range(4):
-			_effect_shape(hand, BoxMesh.new(), Vector3(-0.24 + finger * 0.16, 1.25, 0),
-				Vector3(0.12, 0.6, 0.17), skin)
-		var tween := create_tween().bind_node(hand)
-		tween.tween_property(hand, "position:y", 0.1, 0.6)
-		tween.tween_interval(0.8)
-		tween.tween_property(hand, "position:y", -1.0, 0.4)
-		tween.tween_callback(hand.queue_free)
+	var hands := ZOMBIE_HANDS.instantiate() as Node3D
+	hands.position = Vector3(0, 0, 8)
+	hands.scale = Vector3.ONE * 1.4
+	house.add_child(hands)
+	for part in hands.get_children():
+		if part is AnimationPlayer \
+				or part.name.begins_with("Hand_") \
+				or part.name.begins_with("Grave_"):
+			continue
+		part.queue_free()
+	var animation_player := hands.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if animation_player:
+		animation_player.play("ZombieHands_Break_Through_Soil")
 
 
 func _process(delta: float) -> void:
 	_check_house_walkways(delta)
+	_update_swing_from_audio()
 	scenery_visibility_timer -= delta
 	if scenery_visibility_timer <= 0.0:
 		scenery_visibility_timer = 0.25
