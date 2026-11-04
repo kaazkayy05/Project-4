@@ -52,7 +52,7 @@ func _ready() -> void:
 	section.add_child(level_grid)
 	for index in range(LEVEL_SCENES.size()):
 		var level_button := Button.new()
-		level_button.text = "Level %d" % (index + 1)
+		level_button.text = str(index + 1)
 		level_grid.add_child(level_button)
 		level_button.pressed.connect(_go_to_level.bind(LEVEL_SCENES[index]))
 

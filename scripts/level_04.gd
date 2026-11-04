@@ -18,7 +18,6 @@ const BLOCKING_PARTS := [
 
 var voice_unlocked := true
 var story_count := 0
-var voice_label: Label
 var football_found := 0
 
 
@@ -42,10 +41,8 @@ func _ready() -> void:
 	story_label.text = "Stands memories: 0 / 2"
 	completion_label.text = "LEVEL 4 COMPLETE"
 	completion_label.position.y = 145
-	voice_label = _label(dash_label.get_parent(), "SCREAM JUMP: HOLD SPACE, RELEASE TO RISE", Vector2(20, 105))
 	player.dash_cooldown_changed.connect(_on_dash_changed)
 	_on_dash_changed(0.0, player.dash_cooldown_max, true)
-	player.jump_charge_changed.connect(_on_jump_charge)
 	if OS.is_debug_build():
 		assert(is_equal_approx(player.dash_speed, 25.0),
 			"Level 4 must reset the Level 3 dash upgrade")
@@ -208,13 +205,6 @@ func _add_voice_unlock() -> void:
 	area.add_child(collision)
 	add_child(area)
 	area.body_entered.connect(_unlock_voice)
-	var sign := Label3D.new()
-	sign.text = "SCREAM JUMP READY\nHOLD SPACE, THEN RELEASE"
-	sign.position = Vector3(0, 2.7, -13.0)
-	sign.font_size = 64
-	sign.pixel_size = 0.005
-	sign.modulate = Color(0.79, 0.62, 0.98)
-	add_child(sign)
 	var glow := OmniLight3D.new()
 	glow.position = Vector3(0, 2.5, -12.0)
 	glow.light_color = Color(0.67, 0.42, 0.95)
@@ -228,13 +218,6 @@ func _unlock_voice(body: Node3D) -> void:
 		return
 	voice_unlocked = true
 	player.scream_jump_unlocked = true
-	voice_label.text = "SCREAM JUMP: HOLD SPACE, RELEASE TO RISE"
-
-
-func _on_jump_charge(charge: float, is_charging: bool) -> void:
-	if not voice_unlocked:
-		return
-	voice_label.text = "SCREAM JUMP CHARGE: %d%%" % roundi(charge * 100.0) if is_charging else "SCREAM JUMP: HOLD SPACE, RELEASE TO RISE"
 
 
 func _add_level_pickups() -> void:

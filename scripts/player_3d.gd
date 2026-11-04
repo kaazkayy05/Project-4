@@ -721,11 +721,10 @@ func _update_visual_feedback() -> void:
 			mat_visor.emission = Color(0.2, 1.0, 0.6)
 		State.NORMAL:
 			if is_charging_jump:
-				# Magenta / purple pulsing charge glow
-				var pulse: float = 1.0 + jump_charge * 2.5
-				mat_body.emission = Color(0.8, 0.1, 0.9)
-				mat_body.emission_energy_multiplier = pulse
-				mat_visor.emission = Color(1.0, 0.3, 0.9)
+				var full_charge_flash := jump_charge >= 1.0 and (Time.get_ticks_msec() / 150) % 2 == 0
+				mat_body.emission = Color.WHITE if full_charge_flash else Color(0.8, 0.1, 0.9)
+				mat_body.emission_energy_multiplier = 3.5 if full_charge_flash else 1.0 + jump_charge * 2.5
+				mat_visor.emission = Color.WHITE if full_charge_flash else Color(1.0, 0.3, 0.9)
 			else:
 				# Standard calm cyan glow
 				mat_body.emission = Color(0.1, 0.4, 0.7)

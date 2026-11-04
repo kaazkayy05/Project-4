@@ -53,7 +53,7 @@ func _update_live_meter(delta: float) -> void:
 		if eff >= 0.22:
 			status = "SCREAM DETECTED!"
 		elif eff >= 0.035:
-			status = "Yapping / Speaking"
+			status = "Speaking"
 		live_meter_label.text = "Live Mic Test: %d dBFS (%s)" % [roundi(dbfs), status]
 
 

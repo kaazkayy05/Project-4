@@ -79,13 +79,6 @@ custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 theme_override_font_sizes/font_size = 13
 
-[node name="DeviceWarning" type="Label" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820116]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.75, 0.35, 1)
-theme_override_font_sizes/font_size = 10
-text = "Note: If using laptop Microphone Array, set Windows format to 2-channel in mmsys.cpl to prevent WASAPI freeze."
-autowrap_mode = 2
-
 [node name="SensitivityLabel" type="Label" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820102]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.9, 0.98, 1)
@@ -130,11 +123,7 @@ theme_override_colors/font_color = Color(0.72, 0.78, 0.88, 1)
 theme_override_font_sizes/font_size = 11
 text = "WHAT SETTINGS & SOUND DO:
 • Sensitivity: Adjusts microphone gain. Higher sensitivity detects quieter speech; lower sensitivity requires louder sound.
-• Recalibrate: Automatically measures background room noise and tunes sensitivity so ambient room hum won't trigger jumps.
-• Yapping: Speak into your mic to walk upright.
-• Silence (5s on ground): Puts you into a crouchwalk.
-• Scream Jump: Shout to jump (unlocked in Level 4 with live dBFS meter). Requires 0.1s quiet between jumps.
-• Karma Warning: Screaming within 3m of an interactable costs 10 Karma!"
+• Recalibrate: Automatically measures background room noise and tunes sensitivity so ambient room hum won't trigger jumps."
 autowrap_mode = 2
 
 [node name="BackButton" type="Button" parent="Center/SettingsPanel/Margin/VBox" unique_id=194820111]
