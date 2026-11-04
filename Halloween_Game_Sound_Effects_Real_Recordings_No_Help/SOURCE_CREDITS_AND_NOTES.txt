@@ -1,0 +1,34 @@
+HALLOWEEN SOUND EFFECT PACK — REAL RECORDINGS
+
+All effects in the main folder use user-supplied recordings (except the wood chopping edit derived from an uploaded recording). No synthesized screams, laughs, crows or swings are included.
+
+Main effects:
+01 Witch Cackle — robinhood76, Freesound #84746
+   https://freesound.org/people/Robinhood76/sounds/84746/
+02 Evil Laugh Deep — devenGarber, Freesound #236982 (first take from Jacob Allen Evil Laugh)
+   https://freesound.org/people/DevenGarber/sounds/236982/
+03 Evil Laugh Manic — xtrgamr, Freesound #252785
+   https://freesound.org/people/xtrgamr/sounds/252785/
+04 Evil Laugh Raspy — wannymanny, Freesound #626796
+   https://freesound.org/people/wannymanny/sounds/626796/
+05 Evil Laugh Sinister — devenGarber, Freesound #236982 (second take of same recording)
+06 Swing Whoosh — silveroso, Freesound #259530
+   https://freesound.org/people/silveroso/sounds/259530/
+07 Chopping Wood Heavy Booming Echo — doline.h, Freesound #766382
+   https://freesound.org/people/doline.h/sounds/766382/
+   Source first 11 seconds, with previously requested deep bass reinforcement and booming echo; original work reported CC BY 4.0.
+08 Scream Only — AderuMoro, Freesound #264918
+   https://freesound.org/people/AderuMoro/sounds/264918/
+   NO spoken "help" included.
+09 Crow Caw — qubodup, Freesound #813115
+   https://freesound.org/people/qubodup/sounds/813115/
+
+Crow_Alternatives:
+- Jofae, Freesound #361470: https://freesound.org/people/jofae/sounds/361470/
+- vixuxx, Freesound #9874: https://freesound.org/people/vixuxx/sounds/9874/
+
+All audio exported as WAV, PCM 16-bit, 48 kHz stereo for straightforward game import.
+The two Jacob Allen files contain DIFFERENT portions of a single recording, not separate performers.
+The crow alternatives are extra files and do not replace the main effect.
+
+IMPORTANT: Exact licenses of clips other than the wood-chopping recording have not been independently verified. Check each sound's Freesound license and attribution requirements before releasing your game, particularly commercially.
